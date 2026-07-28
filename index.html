@@ -650,6 +650,13 @@
   const PIECE_NAMES={I:S('긴 막대','long bar'),O:S('네모','square'),T:S('티 모양','T shape'),S:S('에스 모양','S shape'),Z:S('지 모양','Z shape'),J:S('제이 모양','J shape'),L:S('엘 모양','L shape')};
 
   let dBoard=[],active=null,nextType='I',holdType=null,holdUsed=false,bag=[],score=0,lines=0,level=1,combo=-1;
+  /* Which settled piece each cell came from. dBoard only stores the piece TYPE, so two
+     L pieces sitting side by side are indistinguishable there. The tactile renderer
+     needs piece IDENTITY: cells of one piece merge into a continuous mass, cells of
+     different pieces keep a 1-pin seam between them, which is what makes an individual
+     landed piece findable inside the stack. 0 = empty. */
+  let dPieceId=[],pPieceId=[],pieceSeq=0;
+  function blankIds(w,h){return Array.from({length:h},()=>new Uint16Array(w))}
   let pBoard=[],pTray=[],selectedPiece=0,cursorX=0,cursorY=0,pScore=0,pClears=0,pCombo=0;
   let flashRows=[],flashCols=[];
 
@@ -688,7 +695,7 @@
 
   // ---------- DROP MODE ----------
   function initDrop(){
-    dBoard=Array.from({length:DROP_H},()=>new Uint8Array(DROP_W));score=0;lines=0;level=1;combo=-1;bag=[];nextType=randomBagPiece();holdType=null;holdUsed=false;active=null;lastDanger=0;seenPieceTypes=new Set();
+    dBoard=Array.from({length:DROP_H},()=>new Uint8Array(DROP_W));dPieceId=blankIds(DROP_W,DROP_H);pieceSeq=0;score=0;lines=0;level=1;combo=-1;bag=[];nextType=randomBagPiece();holdType=null;holdUsed=false;active=null;lastDanger=0;seenPieceTypes=new Set();
     running=true;paused=false;over=false;scanMode=false;isAnimating=false;gravityAccumulator=0;clearGrounded();dropLast=performance.now();
     spawnDropPiece(true);cancelAnimationFrame(dropTimer);dropTimer=requestAnimationFrame(dropLoop);audio.setMode('drop');audio.setLevel(1);audio.setDanger(0);audio.start();audio.earcon('start');
     updateHud();announce(S('낙하 모드 시작. 지금 움직이는 블록은 빈틈 없이 꽉 찬 덩어리로, 이미 쌓인 블록은 층마다 얇은 틈이 있는 이어진 면으로, 예상 착지는 한 줄 가로선으로 느껴집니다.','Drop mode started. The piece you are moving is one solid unbroken mass, settled blocks are a continuous surface with a thin seam between layers, and the landing preview is a single horizontal line.'),{phase:'play',tts:true});renderAll();
@@ -763,10 +770,19 @@
     const current=active.type;if(holdType){const swap=holdType;holdType=current;spawnDropPiece(false,swap)}else{holdType=current;active=null;spawnDropPiece(false)}holdUsed=true;audio.earcon('hold');renderHold();speak(S(PIECE_NAMES[current]+' 블록을 보관했습니다.','Held the '+PIECE_NAMES[current]+' piece.'));renderAll();
   }
   async function lockDrop(){
-    if(!active||isAnimating)return;isAnimating=true;let above=false;for(const[cx,cy]of active.cells){const x=active.x+cx,y=active.y+cy;if(y<0){above=true;continue}dBoard[y][x]=active.color}audio.earcon('lock',{pan:panForColumn(active.x,DROP_W),row:Math.max(0,active.y)});audio.microDuck();
+    if(!active||isAnimating)return;isAnimating=true;let above=false;const myId=++pieceSeq,landed=[];for(const[cx,cy]of active.cells){const x=active.x+cx,y=active.y+cy;if(y<0){above=true;continue}dBoard[y][x]=active.color;dPieceId[y][x]=myId;landed.push([x,y])}audio.earcon('lock',{pan:panForColumn(active.x,DROP_W),row:Math.max(0,active.y)});audio.microDuck();
     if(above){isAnimating=false;gameOver(S('블록이 위까지 쌓였어요.','Blocks reached the top.'));return}
     const cleared=[];for(let y=DROP_H-1;y>=0;y--)if(dBoard[y].every(Boolean))cleared.push(y);
-    if(cleared.length){flashRows=cleared.slice();renderAll();await wait(110);flashRows=[];dBoard=dBoard.filter(row=>!row.every(Boolean));while(dBoard.length<DROP_H)dBoard.unshift(new Uint8Array(DROP_W));combo++;const prevLevel=level;const base=[0,100,300,500,800][cleared.length]*level,comboBonus=Math.max(0,combo)*50*level;score+=base+comboBonus;lines+=cleared.length;level=1+Math.floor(lines/10);audio.setLevel(level);audio.earcon('clear',{count:cleared.length});if(cleared.length>=3)bumpBoard('shake',320);const fxScore='+'+(base+comboBonus);if(level>prevLevel)showFx(S('레벨 '+level+'!','LEVEL '+level+'!'),fxScore,'level');else if(cleared.length>=4)showFx(S('테트리스!','TETRIS!'),fxScore,'tetris');else if(combo>0)showFx(S('콤보 ×'+(combo+1),'COMBO ×'+(combo+1)),fxScore);else showFx(S(cleared.length+'줄 클리어',cleared.length+' LINE CLEAR'),fxScore);const comboText=combo>0?S(', 콤보 '+(combo+1),' combo '+(combo+1)):'';announce(S(cleared.length+'줄 완성'+comboText+'.',cleared.length+' line'+(cleared.length>1?'s':'')+' cleared'+comboText+'.'),{phase:'play',tts:true});if(dpConnected)await padLineFlash(cleared)}else combo=-1;
+    if(cleared.length){flashRows=cleared.slice();renderAll();await wait(110);flashRows=[];
+      /* Collapse dPieceId with exactly the same predicate so seams stay attached to
+         their pieces after rows drop. Filtering the two arrays independently would
+         desync them and scramble every boundary on the board. */
+      const keep=dBoard.map(row=>!row.every(Boolean));
+      dPieceId=dPieceId.filter((_,i)=>keep[i]);dBoard=dBoard.filter((_,i)=>keep[i]);
+      while(dBoard.length<DROP_H){dBoard.unshift(new Uint8Array(DROP_W));dPieceId.unshift(new Uint16Array(DROP_W))}combo++;const prevLevel=level;const base=[0,100,300,500,800][cleared.length]*level,comboBonus=Math.max(0,combo)*50*level;score+=base+comboBonus;lines+=cleared.length;level=1+Math.floor(lines/10);audio.setLevel(level);audio.earcon('clear',{count:cleared.length});if(cleared.length>=3)bumpBoard('shake',320);const fxScore='+'+(base+comboBonus);if(level>prevLevel)showFx(S('레벨 '+level+'!','LEVEL '+level+'!'),fxScore,'level');else if(cleared.length>=4)showFx(S('테트리스!','TETRIS!'),fxScore,'tetris');else if(combo>0)showFx(S('콤보 ×'+(combo+1),'COMBO ×'+(combo+1)),fxScore);else showFx(S(cleared.length+'줄 클리어',cleared.length+' LINE CLEAR'),fxScore);const comboText=combo>0?S(', 콤보 '+(combo+1),' combo '+(combo+1)):'';announce(S(cleared.length+'줄 완성'+comboText+'.',cleared.length+' line'+(cleared.length>1?'s':'')+' cleared'+comboText+'.'),{phase:'play',tts:true});if(dpConnected)await padLineFlash(cleared)}else{combo=-1;
+      /* Only when nothing cleared: the clear flash already owns the pins otherwise, and
+         stacking a second burst on top is what overloads the pad. Two frames total. */
+      if(dpConnected)await padLockPulse(landed)}
     active=null;isAnimating=false;if(!spawnDropPiece(false))return;updateDanger();updateHud();renderAll();
   }
   function speedBase(){if(settings.speed==='tactile')return 3000;if(settings.speed==='turn')return Infinity;return settings.speed==='challenge'?640:settings.speed==='standard'?820:1050}
@@ -827,7 +843,7 @@
   ];
   function makePuzzlePiece(){const base=PUZZLE_LIBRARY[(Math.random()*PUZZLE_LIBRARY.length)|0];return{name:base.name,cells:base.cells.map(v=>v.slice()),used:false,color:1+((Math.random()*7)|0)}}
   function initPuzzle(){
-    pBoard=Array.from({length:PUZZLE_H},()=>new Uint8Array(PUZZLE_W));pTray=[makePuzzlePiece(),makePuzzlePiece(),makePuzzlePiece()];selectedPiece=0;cursorX=0;cursorY=0;pScore=0;pClears=0;pCombo=0;running=true;paused=false;over=false;scanMode=false;isAnimating=false;cancelAnimationFrame(dropTimer);ensurePuzzleCursor();audio.setMode('puzzle');audio.setDanger(0);audio.start();audio.earcon('start');updateHud();renderTray();announce(S('블록 퍼즐 시작. 선택 블록은 테두리 질감입니다. 가로 또는 세로 한 줄을 채우면 지워집니다.','Block puzzle started. The selected piece uses an outline texture. Complete a row or column to clear it.'),{phase:'play',tts:true});announceSelectedPuzzle();renderAll();
+    pBoard=Array.from({length:PUZZLE_H},()=>new Uint8Array(PUZZLE_W));pPieceId=blankIds(PUZZLE_W,PUZZLE_H);pieceSeq=0;pTray=[makePuzzlePiece(),makePuzzlePiece(),makePuzzlePiece()];selectedPiece=0;cursorX=0;cursorY=0;pScore=0;pClears=0;pCombo=0;running=true;paused=false;over=false;scanMode=false;isAnimating=false;cancelAnimationFrame(dropTimer);ensurePuzzleCursor();audio.setMode('puzzle');audio.setDanger(0);audio.start();audio.earcon('start');updateHud();renderTray();announce(S('블록 퍼즐 시작. 선택 블록은 테두리 질감입니다. 가로 또는 세로 한 줄을 채우면 지워집니다.','Block puzzle started. The selected piece uses an outline texture. Complete a row or column to clear it.'),{phase:'play',tts:true});announceSelectedPuzzle();renderAll();
   }
   function currentPuzzlePiece(){return pTray[selectedPiece]||null}
   function ensurePuzzleCursor(){const p=currentPuzzlePiece();if(!p)return;const b=pieceBounds(p.cells);cursorX=Math.max(0,Math.min(PUZZLE_W-b.w,cursorX));cursorY=Math.max(0,Math.min(PUZZLE_H-b.h,cursorY))}
@@ -840,11 +856,11 @@
   async function placePuzzle(){
     if(mode!=='puzzle'||!running||paused||over||scanMode||isAnimating)return;const p=currentPuzzlePiece();if(!p||p.used)return;
     if(!canPlacePuzzle(p,cursorX,cursorY)){audio.earcon('blocked',{pan:panForColumn(cursorX,PUZZLE_W),row:cursorY});speak(S('그 자리는 다른 블록과 겹쳐요.','That position overlaps another block.'));return}
-    isAnimating=true;for(const[cx,cy]of p.cells)pBoard[cursorY+cy][cursorX+cx]=p.color;p.used=true;pScore+=p.cells.length*10;audio.earcon('place',{pan:panForColumn(cursorX,PUZZLE_W),row:cursorY});audio.microDuck();
+    isAnimating=true;const myId=++pieceSeq,placed=[];for(const[cx,cy]of p.cells){pBoard[cursorY+cy][cursorX+cx]=p.color;pPieceId[cursorY+cy][cursorX+cx]=myId;placed.push([cursorX+cx,cursorY+cy])}p.used=true;pScore+=p.cells.length*10;audio.earcon('place',{pan:panForColumn(cursorX,PUZZLE_W),row:cursorY});audio.microDuck();
     const fullRows=[],fullCols=[];for(let y=0;y<PUZZLE_H;y++)if(pBoard[y].every(Boolean))fullRows.push(y);for(let x=0;x<PUZZLE_W;x++){let full=true;for(let y=0;y<PUZZLE_H;y++)if(!pBoard[y][x]){full=false;break}if(full)fullCols.push(x)}
-    if(fullRows.length||fullCols.length){flashRows=fullRows.slice();flashCols=fullCols.slice();renderAll();await wait(120);const clearSet=new Set();for(const y of fullRows)for(let x=0;x<PUZZLE_W;x++)clearSet.add(y+','+x);for(const x of fullCols)for(let y=0;y<PUZZLE_H;y++)clearSet.add(y+','+x);for(const key of clearSet){const[y,x]=key.split(',').map(Number);pBoard[y][x]=0}flashRows=[];flashCols=[];const n=fullRows.length+fullCols.length;pCombo++;pClears+=n;const bonus=n*150+Math.max(0,n-1)*100+pCombo*30;pScore+=bonus;audio.earcon('clear',{count:Math.min(4,n)});if(n>=3)bumpBoard('shake',320);const fxScore='+'+bonus;if(pCombo>1)showFx(S('연속 ×'+pCombo,'STREAK ×'+pCombo),fxScore);else if(n>=3)showFx(S(n+'줄 동시 완성!',n+' LINES AT ONCE!'),fxScore,'tetris');else showFx(S(n+'줄 완성',n+' LINE CLEAR'),fxScore);speak(S('완성. '+n+'개 줄 삭제, 연속 '+pCombo+'회.','Complete. '+n+' lines cleared, streak '+pCombo+'.'))}else pCombo=0;
+    if(fullRows.length||fullCols.length){flashRows=fullRows.slice();flashCols=fullCols.slice();renderAll();await wait(120);const clearSet=new Set();for(const y of fullRows)for(let x=0;x<PUZZLE_W;x++)clearSet.add(y+','+x);for(const x of fullCols)for(let y=0;y<PUZZLE_H;y++)clearSet.add(y+','+x);for(const key of clearSet){const[y,x]=key.split(',').map(Number);pBoard[y][x]=0;pPieceId[y][x]=0}flashRows=[];flashCols=[];const n=fullRows.length+fullCols.length;pCombo++;pClears+=n;const bonus=n*150+Math.max(0,n-1)*100+pCombo*30;pScore+=bonus;audio.earcon('clear',{count:Math.min(4,n)});if(n>=3)bumpBoard('shake',320);const fxScore='+'+bonus;if(pCombo>1)showFx(S('연속 ×'+pCombo,'STREAK ×'+pCombo),fxScore);else if(n>=3)showFx(S(n+'줄 동시 완성!',n+' LINES AT ONCE!'),fxScore,'tetris');else showFx(S(n+'줄 완성',n+' LINE CLEAR'),fxScore);speak(S('완성. '+n+'개 줄 삭제, 연속 '+pCombo+'회.','Complete. '+n+' lines cleared, streak '+pCombo+'.'))}else pCombo=0;
     if(pTray.every(v=>v.used)){pTray=[makePuzzlePiece(),makePuzzlePiece(),makePuzzlePiece()];selectedPiece=0;cursorX=0;cursorY=0;ensurePuzzleCursor();speak(S('새 블록 세 개가 나왔어요.','Three new pieces are ready.'))}else cyclePuzzle();
-    isAnimating=false;if(!hasAnyPuzzleMove()){gameOver(S('놓을 수 있는 자리가 없어요.','No more pieces can be placed.'));return}updateHud();renderTray();announceSelectedPuzzle(false);renderAll();
+    isAnimating=false;if(dpConnected&&!fullRows.length&&!fullCols.length)await padLockPulse(placed,5,5);if(!hasAnyPuzzleMove()){gameOver(S('놓을 수 있는 자리가 없어요.','No more pieces can be placed.'));return}updateHud();renderTray();announceSelectedPuzzle(false);renderAll();
   }
   function hasAnyPuzzleMove(){for(const p of pTray){if(p.used)continue;let cells=p.cells;for(let r=0;r<4;r++){const probe={...p,cells};if(findAnyPlacement(probe))return true;cells=rotateCells(cells)}}return false}
   function announceSelectedPuzzle(tts=true){const p=currentPuzzlePiece();if(!p)return;const b=pieceBounds(p.cells),valid=canPlacePuzzle(p,cursorX,cursorY);const text=S((selectedPiece+1)+'번 '+p.name+', '+b.w+'칸 곱하기 '+b.h+'칸. 위치 '+(cursorY+1)+'행 '+(cursorX+1)+'열. '+(valid?'놓을 수 있습니다.':'겹치는 자리입니다.'),'Piece '+(selectedPiece+1)+', '+p.name+', '+b.w+' by '+b.h+'. Row '+(cursorY+1)+', column '+(cursorX+1)+'. '+(valid?'Valid placement.':'Overlapping placement.'));announce(text,{phase:'play',tts})}
@@ -947,11 +963,15 @@
      has none, and that seam-vs-no-seam difference is what tells them apart when the
      piece comes to rest on top of the stack. */
   const solidGapRows=ch=>ch>=5?2:1;
-  function fillTactileCell(g,x,y,cw,ch,kind){
+  /* mergeRight: fill the cell's last pin column too, so this cell runs straight into the
+     one on its right with no seam. Passed true only when the right neighbour belongs to
+     the SAME settled piece. Vertically no flag is needed — solidGapRows() already leaves
+     a row down at the bottom of every settled cell, so stacked rows are always separated. */
+  function fillTactileCell(g,x,y,cw,ch,kind,mergeRight=false){
     const ox=x*cw,oy=y*ch;
     if(kind==='solid'){
-      const gap=solidGapRows(ch);
-      for(let yy=0;yy<ch-gap;yy++)for(let xx=0;xx<cw;xx++)setPin(g,ox+xx,oy+yy)
+      const gap=solidGapRows(ch),w=mergeRight?cw:cw-1;
+      for(let yy=0;yy<ch-gap;yy++)for(let xx=0;xx<w;xx++)setPin(g,ox+xx,oy+yy)
     }else if(kind==='active'){
       /* The piece under the hand has to be the strongest thing on the board, so
          it fills the cell edge to edge. Adjacent cells of the same piece then
@@ -979,24 +999,27 @@
   // regular board state render, then clear it back to null when done.
   let locateOverrideFrame=null;
   function cloneFrame(g){return g.map(row=>row.slice())}
+  /* True when the cell to the right is part of the same landed piece. */
+  function sameDropPiece(x,y){return x+1<DROP_W&&dBoard[y][x+1]&&dPieceId[y]&&dPieceId[y][x+1]===dPieceId[y][x]&&dPieceId[y][x]!==0}
+  function samePuzzlePiece(x,y){return x+1<PUZZLE_W&&pBoard[y][x+1]&&pPieceId[y]&&pPieceId[y][x+1]===pPieceId[y][x]&&pPieceId[y][x]!==0}
   function buildLockedOnlyFrame(){
     const g=blankPortrait();
-    if(mode==='drop'){for(let y=0;y<DROP_H;y++)for(let x=0;x<DROP_W;x++)if(dBoard[y]&&dBoard[y][x])fillTactileCell(g,x,y,4,3,'solid')}
-    else{for(let y=0;y<PUZZLE_H;y++)for(let x=0;x<PUZZLE_W;x++)if(pBoard[y]&&pBoard[y][x])fillTactileCell(g,x,y,5,5,'solid')}
+    if(mode==='drop'){for(let y=0;y<DROP_H;y++)for(let x=0;x<DROP_W;x++)if(dBoard[y]&&dBoard[y][x])fillTactileCell(g,x,y,4,3,'solid',sameDropPiece(x,y))}
+    else{for(let y=0;y<PUZZLE_H;y++)for(let x=0;x<PUZZLE_W;x++)if(pBoard[y]&&pBoard[y][x])fillTactileCell(g,x,y,5,5,'solid',samePuzzlePiece(x,y))}
     return g;
   }
   function buildPortraitFrame(){
     if(locateOverrideFrame)return locateOverrideFrame;
     const g=blankPortrait();if(mode==='drop'){if(flashRows.length){for(const y of flashRows)for(let x=0;x<DROP_W;x++)fillTactileCell(g,x,y,4,3,'flash');return g}
       if(scanMode){const heights=stackHeights();for(let x=0;x<DROP_W;x++){const y=Math.max(0,DROP_H-heights[x]);if(heights[x]>0)fillTactileCell(g,x,y,4,3,'surface')}if(active)for(const[cx,cy]of active.cells){const x=active.x+cx,y=active.y+cy;if(y>=0)fillTactileCell(g,x,y,4,3,'active')}}
-      else{for(let y=0;y<DROP_H;y++)for(let x=0;x<DROP_W;x++)if(dBoard[y]&&dBoard[y][x])fillTactileCell(g,x,y,4,3,'solid');if(active){const gy=ghostY();for(const[cx,cy]of active.cells){const x=active.x+cx,y=gy+cy;if(y>=0)fillTactileCell(g,x,y,4,3,'ghost')}for(const[cx,cy]of active.cells){const x=active.x+cx,y=active.y+cy;if(y>=0)fillTactileCell(g,x,y,4,3,'active')}}}
+      else{for(let y=0;y<DROP_H;y++)for(let x=0;x<DROP_W;x++)if(dBoard[y]&&dBoard[y][x])fillTactileCell(g,x,y,4,3,'solid',sameDropPiece(x,y));if(active){const gy=ghostY();for(const[cx,cy]of active.cells){const x=active.x+cx,y=gy+cy;if(y>=0)fillTactileCell(g,x,y,4,3,'ghost')}for(const[cx,cy]of active.cells){const x=active.x+cx,y=active.y+cy;if(y>=0)fillTactileCell(g,x,y,4,3,'active')}}}
       /* Danger no longer bakes a persistent rail into every frame — a stack that
          stays tall for a while used to leave the edge rail mixed in with normal
          play indefinitely, which risked reading as part of the settled blocks.
          padDangerEdgePulse() below fires a two-pulse edge flash only at the
          moment a danger level is entered, then the board goes back to normal. */
     }else{
-      for(let y=0;y<PUZZLE_H;y++)for(let x=0;x<PUZZLE_W;x++)if(pBoard[y]&&pBoard[y][x])fillTactileCell(g,x,y,5,5,'solid');const p=currentPuzzlePiece();if(p&&!p.used)for(const[cx,cy]of p.cells)fillTactileCell(g,cursorX+cx,cursorY+cy,5,5,canPlacePuzzle(p,cursorX,cursorY)?'active':'invalid');
+      for(let y=0;y<PUZZLE_H;y++)for(let x=0;x<PUZZLE_W;x++)if(pBoard[y]&&pBoard[y][x])fillTactileCell(g,x,y,5,5,'solid',samePuzzlePiece(x,y));const p=currentPuzzlePiece();if(p&&!p.used)for(const[cx,cy]of p.cells)fillTactileCell(g,cursorX+cx,cursorY+cy,5,5,canPlacePuzzle(p,cursorX,cursorY)?'active':'invalid');
     }return g}
   function portraitToHardware(p){const h=Array.from({length:HW_H},()=>new Uint8Array(HW_W));for(let y=0;y<PORTRAIT_H;y++)for(let x=0;x<PORTRAIT_W;x++)if(p[y][x]){if(rotateDir==='cw')h[PORTRAIT_W-1-x][y]=1;else h[x][PORTRAIT_H-1-y]=1}return h}
   const EA=[[0,0],[0,1],[0,2],[0,3],[1,0],[1,1],[1,2],[1,3]];
@@ -1087,6 +1110,17 @@
     if(mode==='drop'&&!wasPaused){paused=false;audio.start();dropLast=performance.now()}
     renderAll();
     locating=false;
+  }
+  /* One-shot confirmation of where a piece just landed: highlight only that piece's
+     cells over the otherwise-normal board, then drop straight back. Two frames, so it
+     does not repeat the line-clear overload. */
+  async function padLockPulse(cells,cw=4,ch=3){
+    if(!dpConnected||!sdk||!cells||!cells.length)return;
+    try{
+      const g=cloneFrame(buildPortraitFrame());
+      for(const[x,y]of cells)fillTactileCell(g,x,y,cw,ch,'flash');
+      locateOverrideFrame=g;renderPad();drawPin();await wait(150);
+    }catch(e){}finally{locateOverrideFrame=null;renderPad();drawPin()}
   }
   async function padLineFlash(rows){if(!dpConnected||!sdk||!rows.length)return;try{for(let i=0;i<2;i++){flashRows=rows.slice();renderPad();await wait(75);flashRows=[];renderPad();await wait(60)}}catch(e){}finally{flashRows=[]}}
 
