@@ -567,10 +567,12 @@
     <dt>전송</dt><dd id="dpMonSends">—</dd>
     <dt>마지막 전송</dt><dd id="dpMonAge">—</dd>
     <dt>대기 중</dt><dd id="dpMonPending">—</dd>
+    <dt>재동기화</dt><dd id="dpMonResyncN">—</dd>
     <dt>점자 줄</dt><dd id="dpMonBrl">—</dd>
   </dl>
   <div class="dpmon-log" id="dpMonLog" aria-label="전송 로그"></div>
   <div class="dpmon-actions">
+    <button type="button" id="dpMonResync">핀 다시 그리기</button>
     <button type="button" id="dpMonCopy">요약 복사</button>
     <button type="button" id="dpMonClear">로그 지우기</button>
     <button type="button" id="dpMonClose">닫기</button>
@@ -673,7 +675,7 @@
   function pieceExposureMap(){try{return JSON.parse(storageGet('dotblocks-piece-exposure')||'{}')}catch(e){return{}}}
   function pieceExposureCount(type){return Number(pieceExposureMap()[type])||0}
   function bumpPieceExposure(type){const m=pieceExposureMap();m[type]=(m[type]||0)+1;storageSet('dotblocks-piece-exposure',JSON.stringify(m))}
-  const PAD_SETTING_KEYS=['speech','speechMode','sfx','music','assist','spawnHold','speed','musicStyle'];
+  const PAD_SETTING_KEYS=['speech','speechMode','sfx','music','assist','spawnHold','speed','musicStyle','resync'];
 
   // Original palette, deliberately distinct from the canonical Tetris color scheme.
   // The board is monochrome on purpose: a DotPad pin is either raised or flat,
@@ -736,7 +738,8 @@
   function initDrop(){
     dBoard=Array.from({length:DROP_H},()=>new Uint8Array(DROP_W));dPieceId=blankIds(DROP_W,DROP_H);pieceSeq=0;score=0;lines=0;level=1;combo=-1;bag=[];nextType=randomBagPiece();holdType=null;holdUsed=false;active=null;lastDanger=0;seenPieceTypes=new Set();
     running=true;paused=false;over=false;scanMode=false;isAnimating=false;gravityAccumulator=0;clearGrounded();dropLast=performance.now();
-    spawnDropPiece(true);cancelAnimationFrame(dropTimer);dropTimer=requestAnimationFrame(dropLoop);audio.setMode('drop');audio.setLevel(1);audio.setDanger(0);audio.start();audio.earcon('start');
+    spawnDropPiece(true);cancelAnimationFrame(dropTimer);dropTimer=requestAnimationFrame(dropLoop);
+    if(dpConnected)padForceResync('새 게임');audio.setMode('drop');audio.setLevel(1);audio.setDanger(0);audio.start();audio.earcon('start');
     updateHud();announce(S('낙하 모드 시작. 쌓인 블록과 지금 움직이는 블록 모두 빈틈 없이 꽉 찬 면으로 느껴집니다. 한 줄 가로선은 예상 착지 위치이고, 지금 블록이 어디 있는지는 F1과 F3을 함께 눌러 확인하세요.','Drop mode started. Both the settled stack and the piece you are moving feel like one completely filled surface. A single horizontal line is the landing preview, and F1 plus F3 highlights where your piece is.'),{phase:'play',tts:true});renderAll();
   }
   function spawnDropPiece(first=false,forcedType=null){
@@ -829,7 +832,11 @@
          desync them and scramble every boundary on the board. */
       const keep=dBoard.map(row=>!row.every(Boolean));
       dPieceId=dPieceId.filter((_,i)=>keep[i]);dBoard=dBoard.filter((_,i)=>keep[i]);
-      while(dBoard.length<DROP_H){dBoard.unshift(new Uint8Array(DROP_W));dPieceId.unshift(new Uint16Array(DROP_W))}combo++;const prevLevel=level;const base=[0,100,300,500,800][cleared.length]*level,comboBonus=Math.max(0,combo)*50*level;score+=base+comboBonus;lines+=cleared.length;level=1+Math.floor(lines/10);audio.setLevel(level);audio.earcon('clear',{count:cleared.length});if(cleared.length>=3)bumpBoard('shake',320);const fxScore='+'+(base+comboBonus);if(level>prevLevel)showFx(S('레벨 '+level+'!','LEVEL '+level+'!'),fxScore,'level');else if(cleared.length>=4)showFx(S('테트리스!','TETRIS!'),fxScore,'tetris');else if(combo>0)showFx(S('콤보 ×'+(combo+1),'COMBO ×'+(combo+1)),fxScore);else showFx(S(cleared.length+'줄 클리어',cleared.length+' LINE CLEAR'),fxScore);const comboText=combo>0?S(', 콤보 '+(combo+1),' combo '+(combo+1)):'';announce(S(cleared.length+'줄 완성'+comboText+'.',cleared.length+' line'+(cleared.length>1?'s':'')+' cleared'+comboText+'.'),{phase:'play',tts:true});}else{combo=-1;
+      while(dBoard.length<DROP_H){dBoard.unshift(new Uint8Array(DROP_W));dPieceId.unshift(new Uint16Array(DROP_W))}combo++;const prevLevel=level;const base=[0,100,300,500,800][cleared.length]*level,comboBonus=Math.max(0,combo)*50*level;score+=base+comboBonus;lines+=cleared.length;level=1+Math.floor(lines/10);audio.setLevel(level);audio.earcon('clear',{count:cleared.length});if(cleared.length>=3)bumpBoard('shake',320);const fxScore='+'+(base+comboBonus);if(level>prevLevel)showFx(S('레벨 '+level+'!','LEVEL '+level+'!'),fxScore,'level');else if(cleared.length>=4)showFx(S('테트리스!','TETRIS!'),fxScore,'tetris');else if(combo>0)showFx(S('콤보 ×'+(combo+1),'COMBO ×'+(combo+1)),fxScore);else showFx(S(cleared.length+'줄 클리어',cleared.length+' LINE CLEAR'),fxScore);const comboText=combo>0?S(', 콤보 '+(combo+1),' combo '+(combo+1)):'';announce(S(cleared.length+'줄 완성'+comboText+'.',cleared.length+' line'+(cleared.length>1?'s':'')+' cleared'+comboText+'.'),{phase:'play',tts:true});
+      /* A clear rewrites most of the board, which is both the largest single update the pad
+         gets and the one most likely to lose a write. Resync here: the pins are already in
+         flux and the announcement is speaking, so the brief drop is masked. */
+      if(dpConnected)await padForceResync('줄 삭제');}else{combo=-1;
       /* Only when nothing cleared: the clear flash already owns the pins otherwise, and
          stacking a second burst on top is what overloads the pad. Two frames total. */
       if(dpConnected)await padLockPulse(landed)}
@@ -1198,6 +1205,42 @@
     padPending=null;padSend(hex,brl,force?'펄스':'즉시');
   }
   function padResetCache(){padLastHex='';padLastBrl='';padPending=null;padCooldown=PAD_MIN_INTERVAL;if(padFlushTimer){clearTimeout(padFlushTimer);padFlushTimer=0}}
+  /* WHY THIS EXISTS — the SDK sends differential updates and trusts itself.
+     DotPadSendModule.setDotPadLineCommand() diffs the new line against its own copy of the
+     line (`lineData`), transmits only the single contiguous changed byte range, and
+     DotPadLine.setCommand() commits the new bytes into `lineData` immediately — before any
+     ACK. So if one write is lost, truncated or dropped, the device never applies it while
+     the SDK records that it did. Those bytes are then never resent, because the next frame
+     diffs against the optimistic copy and finds no difference.
+
+     That is why the bottom of a tall stack goes blank and stays blank: those cells are
+     static, so the game never changes them again and no new diff is ever produced. It also
+     explains why nudging a piece higher up in the same column can heal it — compareString()
+     returns one contiguous [first,last] range, so a change up top widens the range far
+     enough to sweep the stale tail back in. And why a short stack looks fine: those bytes
+     are still 00 on both sides, so there is nothing to lose.
+
+     The clean fix would be DotPadSendModule.resetAllLineData(), which zeroes `lineData`
+     WITHOUT transmitting and would force a full resend with no visible pin drop — but it
+     lives behind DotDevice's private #k and is not reachable. So the only lever from here is
+     displayAllDown(): actually transmit zeros, which the SDK records, then send the real
+     frame so every byte differs and gets resent. Costs one extra full frame and a brief
+     pin drop, hence it runs at moments the board is changing anyway plus on demand. */
+  let padResyncing=false,padResyncCount=0;
+  async function padForceResync(reason){
+    if(!dpConnected||!sdk||padResyncing)return false;
+    padResyncing=true;padResyncCount++;
+    try{
+      sdk.displayAllDown();
+      padResetCache();
+      await wait(PAD_BIG_INTERVAL);
+      renderPad(true);
+      padLog.unshift(`${new Date().toLocaleTimeString('ko-KR',{hour12:false})}  ↻ 전체 재동기화 (${reason||''})`);
+      if(padLog.length>60)padLog.pop();
+      return true;
+    }catch(e){return false}
+    finally{padResyncing=false}
+  }
   /* Inverse of portraitToHardware()+encodeHardware(), so the monitor can show the frame
      that is actually on the pins rather than the frame we intended to draw. Without this
      the preview would silently agree with the game board even while the pad lagged. */
@@ -1288,15 +1331,17 @@
   }
   function confirmedHardDrop(){return confirmActionTwice('hardDrop',S('즉시 낙하 확인. 1.8초 안에 같은 키를 한 번 더 누르세요.','Hard drop confirmation. Press the same key again within 1.8 seconds.'),hardDrop)}
   function confirmedRestart(){return confirmActionTwice('restart',S('다시 시작 확인. 1.8초 안에 F1을 한 번 더 누르세요.','Restart confirmation. Press F1 again within 1.8 seconds.'),newGame)}
-  function padSettingName(key){return {speech:S('음성 안내','speech guidance'),speechMode:S('음성 안내 방식','speech source'),sfx:S('방향 효과음','directional effects'),music:S('배경음악','music'),assist:S('잠금 유예','lock delay'),spawnHold:S('새 블록 항상 정지','always pause new piece'),speed:S('낙하 방식','drop style'),musicStyle:S('음악 스타일','music style')}[key]}
-  function padSettingValue(key){if(key==='speechMode')return {superdot:S('슈퍼닷 TTS','SuperDot TTS'),screenreader:S('스크린리더만','screen reader only'),both:S('둘 다','both')}[settings.speechMode];if(key==='speed')return {tactile:S('촉각 저속','tactile slow'),turn:S('촉각 턴제','tactile turn based'),relaxed:S('여유','relaxed'),standard:S('표준','standard'),challenge:S('도전','challenge')}[settings.speed];if(key==='musicStyle')return settings.musicStyle==='retro'?S('레트로','retro'):S('앰비언트','ambient');return settings[key]?S('켜짐','on'):S('꺼짐','off')}
+  function padSettingName(key){return {speech:S('음성 안내','speech guidance'),speechMode:S('음성 안내 방식','speech source'),sfx:S('방향 효과음','directional effects'),music:S('배경음악','music'),assist:S('잠금 유예','lock delay'),spawnHold:S('새 블록 항상 정지','always pause new piece'),speed:S('낙하 방식','drop style'),musicStyle:S('음악 스타일','music style'),resync:S('핀 다시 그리기','redraw pins')}[key]}
+  function padSettingValue(key){if(key==='resync')return S('F3을 누르면 실행','press F3 to run');if(key==='speechMode')return {superdot:S('슈퍼닷 TTS','SuperDot TTS'),screenreader:S('스크린리더만','screen reader only'),both:S('둘 다','both')}[settings.speechMode];if(key==='speed')return {tactile:S('촉각 저속','tactile slow'),turn:S('촉각 턴제','tactile turn based'),relaxed:S('여유','relaxed'),standard:S('표준','standard'),challenge:S('도전','challenge')}[settings.speed];if(key==='musicStyle')return settings.musicStyle==='retro'?S('레트로','retro'):S('앰비언트','ambient');return settings[key]?S('켜짐','on'):S('꺼짐','off')}
   function announcePadSetting(){const key=PAD_SETTING_KEYS[padSettingIndex];speak((padSettingIndex+1)+'/'+PAD_SETTING_KEYS.length+'. '+padSettingName(key)+', '+padSettingValue(key)+'. '+S('F1 이전, F2 다음, F3 변경, F4 닫기.','F1 previous, F2 next, F3 change, F4 close.'))}
   function syncSettingUI(){
     setToggle(speechToggle,'speechState',settings.speech);setToggle(sfxToggle,'sfxState',settings.sfx);setToggle(musicToggle,'musicState',settings.music);setToggle(assistToggle,'assistState',settings.assist);setToggle(spawnHoldToggle,'spawnHoldState',settings.spawnHold);
     speechModeSelect.value=settings.speechMode;speedSelect.value=settings.speed;musicStyleSelect.value=settings.musicStyle;syncSpeechModeAria();syncSoundBtn();saveSettings()
   }
   function enterPadSettings(){padMenu='settings';padSettingIndex=0;clearConfirm();announcePadSetting()}
-  function changePadSetting(){const key=PAD_SETTING_KEYS[padSettingIndex];if(key==='speechMode'){const a=['superdot','screenreader','both'];settings.speechMode=a[(a.indexOf(settings.speechMode)+1)%a.length]}else if(key==='speed'){const a=['tactile','turn','relaxed','standard','challenge'];settings.speed=a[(a.indexOf(settings.speed)+1)%a.length]}else if(key==='musicStyle'){settings.musicStyle=settings.musicStyle==='procedural'?'retro':'procedural';audio.setMusicStyle(settings.musicStyle)}else{settings[key]=!settings[key];if(key==='sfx')audio.setSfxEnabled(settings.sfx);if(key==='music')audio.setMusicEnabled(settings.music)}syncSettingUI();announcePadSetting()}
+  function changePadSetting(){const key=PAD_SETTING_KEYS[padSettingIndex];
+    if(key==='resync'){speak(S('핀을 다시 그립니다.','Redrawing the pins.'));padForceResync('설정 메뉴');return}
+    if(key==='speechMode'){const a=['superdot','screenreader','both'];settings.speechMode=a[(a.indexOf(settings.speechMode)+1)%a.length]}else if(key==='speed'){const a=['tactile','turn','relaxed','standard','challenge'];settings.speed=a[(a.indexOf(settings.speed)+1)%a.length]}else if(key==='musicStyle'){settings.musicStyle=settings.musicStyle==='procedural'?'retro':'procedural';audio.setMusicStyle(settings.musicStyle)}else{settings[key]=!settings[key];if(key==='sfx')audio.setSfxEnabled(settings.sfx);if(key==='music')audio.setMusicEnabled(settings.music)}syncSettingUI();announcePadSetting()}
   function handlePadSettingsKey(keyCode){if(keyCode===KeyCodes.KeyFunction1){padSettingIndex=(padSettingIndex+PAD_SETTING_KEYS.length-1)%PAD_SETTING_KEYS.length;announcePadSetting()}else if(keyCode===KeyCodes.KeyFunction2){padSettingIndex=(padSettingIndex+1)%PAD_SETTING_KEYS.length;announcePadSetting()}else if(keyCode===KeyCodes.KeyFunction3){changePadSetting()}else if(keyCode===KeyCodes.KeyFunction4){padMenu=introScreen.hidden?null:'intro';speak(S('설정을 닫았습니다.','Settings closed.'))}}
 
 
@@ -1345,6 +1390,7 @@
       +'회 · 중복차단 '+padStats.deduped+'회 · 최근 '+padStats.lastDiff+'핀('+padStats.lastReason+')';
     $('dpMonAge').textContent=(age===null?'없음':age+'ms 전')+' · 대기시간 '+padCooldown+'ms';
     $('dpMonPending').textContent=padPending?'있음 (곧 전송)':'없음';
+    $('dpMonResyncN').textContent=padResyncCount+'회'+(padResyncing?' (진행 중)':'');
     $('dpMonBrl').textContent=(padLastBrl||'—')+(padLastBrl!==brailleLine()?'  ← 현재와 다름':'');
     $('dpMonLog').textContent=padLog.slice(0,12).join('\n')||'전송 없음';
   }
@@ -1355,6 +1401,7 @@
     const b=$('dpMonBtn');if(b)b.setAttribute('aria-pressed',String(on));
     speak(on?S('닷패드 모니터를 열었습니다.','DotPad monitor opened.'):S('닷패드 모니터를 닫았습니다.','DotPad monitor closed.'));
   }
+  $('dpMonResync').addEventListener('click',()=>padForceResync('모니터'));
   $('dpMonClose').addEventListener('click',()=>dpMonOpen(false));
   $('dpMonClear').addEventListener('click',()=>{padLog.length=0;padStats.sent=0;padStats.coalesced=0;padStats.deduped=0;dpMonTick()});
   $('dpMonCopy').addEventListener('click',()=>{
@@ -1367,6 +1414,7 @@
       '마지막 전송: '+(padLastSentAt<0?'없음':Math.round(performance.now()-padLastSentAt)+'ms 전')
         +', 변경 '+padStats.lastDiff+'핀, 사유 '+padStats.lastReason+', 대기시간 '+padCooldown+'ms',
       '대기 프레임: '+(padPending?'있음':'없음'),
+      '재동기화: '+padResyncCount+'회'+(padResyncing?' (진행 중)':''),
       '점자(전송): '+padLastBrl,'점자(현재): '+brailleLine(),
       '','전송 로그',...padLog.slice(0,30)].join('\n');
     try{navigator.clipboard.writeText(txt)}catch(e){}
@@ -1408,7 +1456,7 @@
   async function connectAndStart(){if(!dpConnected)await connectDotPad();showPlay();newGame()}
 
   // ---------- INPUT / UI ----------
-  document.addEventListener('keydown',ev=>{const k=ev.key;document.body.classList.add('kbd');ensureAudio();if(!introScreen.hidden){if(k==='1'||k==='2'||k==='3'){setDifficulty(Number(k)-1);ev.preventDefault();return}if(k==='p'||k==='P'){puzzleModeBtn.click();ev.preventDefault();return}if(k==='Enter'){showPlay();newGame();ev.preventDefault();return}}if(k==='Escape'&&!settingsDrawer.hidden){closeDrawer();ev.preventDefault();return}if(k==='1'){setMode('drop',true);ev.preventDefault();return}if(k==='2'){setMode('puzzle',true);ev.preventDefault();return}if(k==='h'||k==='H'||k==='?'){tutorial();ev.preventDefault();return}if(k==='n'||k==='N'){confirmedRestart();ev.preventDefault();return}if(k==='o'||k==='O'){toggleOrientation();ev.preventDefault();return}if(k==='s'||k==='S'){readStatus(false);ev.preventDefault();return}if(k==='d'||k==='D'){readStatus(true);ev.preventDefault();return}if(k==='v'||k==='V'){readNextHold();ev.preventDefault();return}if(k==='q'||k==='Q'){toggleScan();ev.preventDefault();return}if(k==='m'||k==='M'){dpMonOpen(dpMon.hidden);ev.preventDefault();return}if(k==='Enter'&&over){confirmedRestart();ev.preventDefault();return}
+  document.addEventListener('keydown',ev=>{const k=ev.key;document.body.classList.add('kbd');ensureAudio();if(!introScreen.hidden){if(k==='1'||k==='2'||k==='3'){setDifficulty(Number(k)-1);ev.preventDefault();return}if(k==='p'||k==='P'){puzzleModeBtn.click();ev.preventDefault();return}if(k==='Enter'){showPlay();newGame();ev.preventDefault();return}}if(k==='Escape'&&!settingsDrawer.hidden){closeDrawer();ev.preventDefault();return}if(k==='1'){setMode('drop',true);ev.preventDefault();return}if(k==='2'){setMode('puzzle',true);ev.preventDefault();return}if(k==='h'||k==='H'||k==='?'){tutorial();ev.preventDefault();return}if(k==='n'||k==='N'){confirmedRestart();ev.preventDefault();return}if(k==='o'||k==='O'){toggleOrientation();ev.preventDefault();return}if(k==='s'||k==='S'){readStatus(false);ev.preventDefault();return}if(k==='d'||k==='D'){readStatus(true);ev.preventDefault();return}if(k==='v'||k==='V'){readNextHold();ev.preventDefault();return}if(k==='q'||k==='Q'){toggleScan();ev.preventDefault();return}if(k==='m'||k==='M'){dpMonOpen(dpMon.hidden);ev.preventDefault();return}if(k==='g'||k==='G'){speak(S('핀을 다시 그립니다.','Redrawing the pins.'));padForceResync('수동');ev.preventDefault();return}if(k==='Enter'&&over){confirmedRestart();ev.preventDefault();return}
     if(mode==='drop'){if(k==='ArrowLeft')moveDrop(-1,0);else if(k==='ArrowRight')moveDrop(1,0);else if(k==='ArrowDown')moveDrop(0,1);else if(k==='ArrowUp'||k==='x'||k==='X')rotateDrop();else if(k===' ')confirmedHardDrop();else if(k==='c'||k==='C')holdDrop();else if(k==='p'||k==='P')togglePause();else if(k==='f'||k==='F')padLocateCurrent();else return;ev.preventDefault()}
     else{if(k==='ArrowLeft')movePuzzle(-1,0);else if(k==='ArrowRight')movePuzzle(1,0);else if(k==='ArrowUp')movePuzzle(0,-1);else if(k==='ArrowDown')movePuzzle(0,1);else if(k==='r'||k==='R')rotatePuzzle();else if(k==='Tab')cyclePuzzle();else if(k===' '||k==='Enter')placePuzzle();else if(k==='f'||k==='F')padLocateCurrent();else return;ev.preventDefault()}});
   DIFFS.forEach((d,i)=>$(d.id).addEventListener('click',()=>setDifficulty(i)));
