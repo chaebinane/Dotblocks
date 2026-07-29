@@ -168,6 +168,7 @@
 - `?mode=drop` 또는 `?mode=puzzle`
 - `?lang=ko` 또는 `?lang=en`
 - `?embed=1`
+- `?monitor=1` (닷패드 모니터 열기, `M` 키로도 토글)
 - `?preview=1`
 - `?rotate=cw` 또는 `?rotate=ccw`
 
@@ -212,6 +213,8 @@
   - `STACK_TEXTURE`: 쌓인 블록의 핀 질감 (`'full'` / `'layers'` / `'pieces'`)
   - `PAD_MIN_INTERVAL`: 닷패드 최소 전송 간격. 동일 프레임은 보내지 않고, 간격 안에 들어온
     프레임은 보관 후 내보내 최종 상태가 유실되지 않게 합니다
+  - `PAD_BIG_DIFF` / `PAD_BIG_INTERVAL`: 한 프레임에서 바뀐 핀이 이 수를 넘으면(줄 삭제처럼
+    보드 대부분이 다시 그려질 때) 더 긴 대기를 씁니다. 실기에서 조정하는 값입니다
 - `audio-engine.js`: CC0 절차형 BGM과 방향 이어콘
 - `tts.js`: 음성 코어 로더 (호스트의 `/tts.js`가 있으면 그쪽 `TW_TTS`에 자리를 넘김)
 - `superdot-tts-core.js`: 슈퍼닷 TTS 구현

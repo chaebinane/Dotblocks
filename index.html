@@ -246,6 +246,23 @@
     background-image:radial-gradient(circle,rgb(255 255 255 / 32%) 0 1px,transparent 1.4px);background-size:7px 7px;background-position:4px 4px}
   .pad-shape::after{content:"";position:absolute;left:50%;bottom:-8px;width:20px;height:4px;border-radius:3px;background:var(--accent);transform:translateX(-50%)}
   .legend{display:grid;grid-template-columns:auto 1fr;gap:9px 10px;align-items:center;font-size:11.5px;font-weight:500;color:var(--ink-secondary)}
+  /* 닷패드 모니터 — 실제로 전송된 프레임과 게임판이 어긋나는지 눈으로 대조하는 진단 창 */
+  .dpmon{position:fixed;inset:auto 12px 12px auto;z-index:90;width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;background:#0b0e13;border:1px solid rgb(255 255 255 / 14%);border-radius:12px;padding:12px 14px;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;color:#e6eaf0;box-shadow:0 18px 48px rgb(0 0 0 / 55%)}
+  .dpmon[hidden]{display:none}
+  .dpmon h3{margin:0 0 8px;font-size:13px;letter-spacing:.02em;display:flex;align-items:center;gap:8px}
+  .dpmon h3 .sp{margin-left:auto;font-weight:400;color:#9aa4b2}
+  .dpmon-grids{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+  .dpmon-col{flex:0 0 auto}
+  .dpmon-col h4{margin:0 0 4px;font-size:11px;font-weight:600;color:#9aa4b2}
+  .dpmon canvas{display:block;background:#e8e2d8;border-radius:4px}
+  .dpmon-stats{margin-top:10px;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:11.5px}
+  .dpmon-stats dt{color:#9aa4b2}
+  .dpmon-stats dd{margin:0}
+  .dpmon-diff{color:#ff5d6c;font-weight:700}
+  .dpmon-ok{color:#43d17d;font-weight:700}
+  .dpmon-log{margin:8px 0 0;padding:6px 8px;max-height:112px;overflow:auto;background:rgb(255 255 255 / 4%);border-radius:6px;font-size:11px;white-space:pre-wrap}
+  .dpmon-actions{margin-top:9px;display:flex;gap:6px;flex-wrap:wrap}
+  .dpmon-actions button{font:inherit;padding:5px 9px;border-radius:6px;border:1px solid rgb(255 255 255 / 18%);background:rgb(255 255 255 / 6%);color:inherit;cursor:pointer;min-height:32px}
   .legend-sample{width:27px;height:19px;display:grid;place-items:center;border:1px solid rgb(255 255 255 / 10%);border-radius:5px;background:rgb(255 255 255 / 4%)}
   .legend-sample::before{content:"";width:16px;height:9px;border-radius:2px}
   .legend-sample.solid::before{width:19px;height:5px;border-radius:1px;background:#d8dee7;box-shadow:0 4px 0 #d8dee7}
@@ -530,6 +547,7 @@
       <div class="speed-row"><label for="musicStyleSelect" id="musicStyleLabel">배경음악 스타일</label><select id="musicStyleSelect"><option value="procedural">기본 (오리지널 앰비언트/칩튠)</option><option value="retro">레트로 클래식 (보조)</option></select></div>
       <div class="speed-row"><label for="speedSelect" id="speedLabel">낙하 속도</label><select id="speedSelect"><option value="tactile">촉각 저속</option><option value="turn">촉각 턴제</option><option value="relaxed">여유</option><option value="standard">표준</option><option value="challenge">도전</option></select></div>
     </div></section>
+    <section class="sidecard"><h2>진단</h2><div class="toggle-list"><button class="toggle" id="dpMonBtn" type="button" aria-pressed="false"><span>닷패드 모니터</span><b id="dpMonBtnState">M 키</b></button></div><div class="helptext">실제로 닷패드에 전송된 프레임과 지금 게임판을 나란히 비교합니다. 어긋나면 차이 나는 핀을 붉게 표시합니다.</div></section>
     <section class="sidecard"><h2 id="verticalTitle">세로 닷패드</h2><div class="orientation" id="orientationText"><strong>40×60 논리 핀</strong>을 실제 60×40 출력으로 자동 회전합니다.</div><div class="legend" id="legend"><span class="legend-sample outline" aria-hidden="true"></span><span>빈틈 없이 꽉 찬 면: 쌓인 블록과 움직이는 블록</span><span class="legend-sample solid" aria-hidden="true"></span><span>F1+F3: 지금 블록만 강조해서 위치 확인</span><span class="legend-sample ghost" aria-hidden="true"></span><span>가로로 이어진 선: 예상 착지</span></div></section>
   </aside>
 
@@ -537,6 +555,27 @@
   <section class="screen-overlay" id="resultOverlay" hidden aria-labelledby="resultTitle"><div class="overlay-card"><div class="overlay-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21l8 0"/><path d="M12 17l0 4"/><path d="M7 4l10 0"/><path d="M17 4l0 8a5 5 0 0 1 -10 0l0 -8"/><path d="M5 9a2 2 0 0 1 -2 -2v-1a2 2 0 0 1 2 -2h2"/><path d="M19 9a2 2 0 0 0 2 -2v-1a2 2 0 0 0 -2 -2h-2"/></svg></div><h2 id="resultTitle">게임 종료</h2><div class="result-score"><span id="resultScore">0</span><small>점</small></div><p id="resultReason">게임 기록을 저장했습니다.</p><div class="overlay-actions"><button class="btn primary" id="restartBtn" type="button">다시 플레이</button><button class="btn" id="resultHomeBtn" type="button">다른 모드 선택</button></div></div></section>
 </div>
 
+<div class="dpmon" id="dpMon" hidden role="region" aria-label="닷패드 모니터">
+  <h3>닷패드 모니터<span class="sp" id="dpMonState">대기</span></h3>
+  <div class="dpmon-grids">
+    <div class="dpmon-col"><h4>닷패드 (마지막 전송)</h4><canvas id="dpMonSent" width="164" height="244"></canvas></div>
+    <div class="dpmon-col"><h4>게임판 (지금 상태)</h4><canvas id="dpMonLive" width="164" height="244"></canvas></div>
+    <div class="dpmon-col"><h4>차이</h4><canvas id="dpMonDiff" width="164" height="244"></canvas></div>
+  </div>
+  <dl class="dpmon-stats">
+    <dt>일치</dt><dd id="dpMonMatch">—</dd>
+    <dt>전송</dt><dd id="dpMonSends">—</dd>
+    <dt>마지막 전송</dt><dd id="dpMonAge">—</dd>
+    <dt>대기 중</dt><dd id="dpMonPending">—</dd>
+    <dt>점자 줄</dt><dd id="dpMonBrl">—</dd>
+  </dl>
+  <div class="dpmon-log" id="dpMonLog" aria-label="전송 로그"></div>
+  <div class="dpmon-actions">
+    <button type="button" id="dpMonCopy">요약 복사</button>
+    <button type="button" id="dpMonClear">로그 지우기</button>
+    <button type="button" id="dpMonClose">닫기</button>
+  </div>
+</div>
 <div class="pinwrap" id="pinwrap"><canvas id="pin" width="160" height="240" aria-hidden="true"></canvas><div class="cap" id="pinCap">세로 사용 기준 40×60<br>전부 꽉 찬 면=블록 · 가로선=착지 · F1+F3=현재 위치</div></div>
 <script src="./audio-engine.js"></script>
 <script>
@@ -1102,15 +1141,43 @@
      the window expires — so bursts collapse to their final state instead of replaying
      every intermediate one, and the last frame is never the one that gets dropped. */
   const PAD_MIN_INTERVAL=170;
-  let padLastHex='',padLastBrl='',padLastSentAt=-1e9,padPending=null,padFlushTimer=0;
-  function padSend(hex,brl){
+  /* A DotPad's refresh time scales with how many pins have to physically move, so one
+     fixed interval cannot serve both a one-cell nudge and a four-row clear that rewrites
+     almost the whole board. Clearing several rows at once was still desyncing because the
+     170ms floor is nowhere near enough for a near-total rewrite. The cooldown after a send
+     therefore scales with how many pins that frame actually changed. */
+  const PAD_BIG_DIFF=240,PAD_BIG_INTERVAL=520;
+  let padLastHex='',padLastBrl='',padLastSentAt=-1e9,padPending=null,padFlushTimer=0,padCooldown=PAD_MIN_INTERVAL;
+  const padStats={sent:0,coalesced:0,deduped:0,lastDiff:0,lastReason:'—'};
+  const padLog=[];
+  function hexDiffPins(a,b){
+    if(!a||!b||a.length!==b.length)return 2400;
+    let d=0;
+    for(let i=0;i<a.length;i+=2){
+      const x=parseInt(a.substr(i,2),16)^parseInt(b.substr(i,2),16);
+      if(x)for(let m=0;m<8;m++)if(x&(1<<m))d++;
+    }
+    return d;
+  }
+  function padSend(hex,brl,reason){
+    const diff=hexDiffPins(padLastHex,hex);
     padLastHex=hex;padLastBrl=brl;padLastSentAt=performance.now();
+    padCooldown=diff>=PAD_BIG_DIFF?PAD_BIG_INTERVAL:PAD_MIN_INTERVAL;
+    padStats.sent++;padStats.lastDiff=diff;padStats.lastReason=reason||'—';
+    padLog.unshift(`${new Date().toLocaleTimeString('ko-KR',{hour12:false})}.${String(Math.floor(performance.now()%1000)).padStart(3,'0')}  ${String(diff).padStart(4)}핀 변경  ${reason||''}  대기 ${padCooldown}ms`);
+    if(padLog.length>60)padLog.pop();
     try{sdk.displayGraphicData(hex);sdk.displayTextData(brl)}catch(e){}
   }
   function padFlush(){
     padFlushTimer=0;
     if(!padPending||!dpConnected||!sdk){padPending=null;return}
-    const p=padPending;padPending=null;padSend(p.hex,p.brl);
+    const p=padPending;padPending=null;
+    /* Re-check the cooldown: the frame may have been queued behind a big update whose
+       cooldown is still running, in which case wait out the remainder rather than
+       sending on top of a refresh the pad has not finished. */
+    const since=performance.now()-padLastSentAt;
+    if(since<padCooldown){padPending=p;padFlushTimer=setTimeout(padFlush,padCooldown-since);return}
+    padSend(p.hex,p.brl,'합쳐짐');
   }
   /* force: deliberate pulse sequences (locate, danger, lock) already pace themselves with
      await and their whole point is the alternation, so they bypass the spacing. They still
@@ -1119,17 +1186,36 @@
     if(!dpConnected||!sdk)return;
     let hex,brl;
     try{hex=encodeHardware(portraitToHardware(buildPortraitFrame()));brl=brailleLine()}catch(e){return}
-    if(hex===padLastHex&&brl===padLastBrl){padPending=null;return}
+    if(hex===padLastHex&&brl===padLastBrl){padPending=null;padStats.deduped++;return}
     const now=performance.now(),since=now-padLastSentAt;
-    if(!force&&since<PAD_MIN_INTERVAL){
+    if(!force&&since<padCooldown){
+      if(padPending)padStats.coalesced++;
       padPending={hex,brl};
-      if(!padFlushTimer)padFlushTimer=setTimeout(padFlush,PAD_MIN_INTERVAL-since);
+      if(!padFlushTimer)padFlushTimer=setTimeout(padFlush,padCooldown-since);
       return;
     }
     if(padFlushTimer){clearTimeout(padFlushTimer);padFlushTimer=0}
-    padPending=null;padSend(hex,brl);
+    padPending=null;padSend(hex,brl,force?'펄스':'즉시');
   }
-  function padResetCache(){padLastHex='';padLastBrl='';padPending=null;if(padFlushTimer){clearTimeout(padFlushTimer);padFlushTimer=0}}
+  function padResetCache(){padLastHex='';padLastBrl='';padPending=null;padCooldown=PAD_MIN_INTERVAL;if(padFlushTimer){clearTimeout(padFlushTimer);padFlushTimer=0}}
+  /* Inverse of portraitToHardware()+encodeHardware(), so the monitor can show the frame
+     that is actually on the pins rather than the frame we intended to draw. Without this
+     the preview would silently agree with the game board even while the pad lagged. */
+  function decodeHardware(hex){
+    const h=Array.from({length:HW_H},()=>new Uint8Array(HW_W));
+    if(!hex||hex.length<600)return null;
+    let k=0;
+    for(let s=0;s<10;s++)for(let n=0;n<30;n++){
+      const b=parseInt(hex.substr(k,2),16);k+=2;
+      for(let m=0;m<8;m++){const[u,p]=EA[m];if(b&(1<<m))h[s*4+p][n*2+u]=1}
+    }
+    const g=blankPortrait();
+    for(let y=0;y<PORTRAIT_H;y++)for(let x=0;x<PORTRAIT_W;x++){
+      const on=rotateDir==='cw'?h[PORTRAIT_W-1-x][y]:h[x][PORTRAIT_H-1-y];
+      if(on)g[y][x]=1;
+    }
+    return g;
+  }
   function wait(ms){return new Promise(r=>setTimeout(r,ms))}
   async function padPulse(){if(!dpConnected||!sdk)return;try{for(let i=0;i<3;i++){sdk.displayAllUp&&sdk.displayAllUp();await wait(70);sdk.displayAllDown&&sdk.displayAllDown();await wait(55)}padResetCache();renderPad(true)}catch(e){}}
   // Danger no longer bakes a persistent rail into the board (see buildPortraitFrame).
@@ -1213,6 +1299,80 @@
   function changePadSetting(){const key=PAD_SETTING_KEYS[padSettingIndex];if(key==='speechMode'){const a=['superdot','screenreader','both'];settings.speechMode=a[(a.indexOf(settings.speechMode)+1)%a.length]}else if(key==='speed'){const a=['tactile','turn','relaxed','standard','challenge'];settings.speed=a[(a.indexOf(settings.speed)+1)%a.length]}else if(key==='musicStyle'){settings.musicStyle=settings.musicStyle==='procedural'?'retro':'procedural';audio.setMusicStyle(settings.musicStyle)}else{settings[key]=!settings[key];if(key==='sfx')audio.setSfxEnabled(settings.sfx);if(key==='music')audio.setMusicEnabled(settings.music)}syncSettingUI();announcePadSetting()}
   function handlePadSettingsKey(keyCode){if(keyCode===KeyCodes.KeyFunction1){padSettingIndex=(padSettingIndex+PAD_SETTING_KEYS.length-1)%PAD_SETTING_KEYS.length;announcePadSetting()}else if(keyCode===KeyCodes.KeyFunction2){padSettingIndex=(padSettingIndex+1)%PAD_SETTING_KEYS.length;announcePadSetting()}else if(keyCode===KeyCodes.KeyFunction3){changePadSetting()}else if(keyCode===KeyCodes.KeyFunction4){padMenu=introScreen.hidden?null:'intro';speak(S('설정을 닫았습니다.','Settings closed.'))}}
 
+
+  // ---------- DOTPAD MONITOR ----------
+  /* Diagnostic window for comparing what is physically on the pins against what the game
+     thinks the board is. drawPin() cannot answer that question: it renders
+     buildPortraitFrame(), i.e. the INTENDED frame, so it agrees with the game board even
+     when a send was coalesced or dropped and the pad is actually behind. This panel decodes
+     padLastHex — the bytes that really went out — and diffs the two. */
+  const dpMon=$('dpMon');
+  let dpMonTimer=0;
+  function dpMonGrid(canvas,g,highlight){
+    const c=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+    c.clearRect(0,0,W,H);
+    c.fillStyle=highlight?'#141821':'#e8e2d8';c.fillRect(0,0,W,H);
+    if(!g)return;
+    const gx=W/PORTRAIT_W,gy=H/PORTRAIT_H,r=Math.min(gx,gy)*.36;
+    for(let y=0;y<PORTRAIT_H;y++)for(let x=0;x<PORTRAIT_W;x++){
+      const on=g[y][x];
+      if(highlight&&!on)continue;
+      c.fillStyle=highlight?'#ff5d6c':(on?'#191714':'#cfc8bc');
+      c.beginPath();c.arc((x+.5)*gx,(y+.5)*gy,on?r:r*.38,0,6.2832);c.fill();
+    }
+  }
+  function dpMonSummary(){
+    const sentG=decodeHardware(padLastHex),liveG=buildPortraitFrame();
+    let diff=0;const diffG=blankPortrait();
+    for(let y=0;y<PORTRAIT_H;y++)for(let x=0;x<PORTRAIT_W;x++){
+      const a=sentG?sentG[y][x]:0,b=liveG[y][x];
+      if(a!==b){diff++;diffG[y][x]=1}
+    }
+    return{sentG,liveG,diffG,diff};
+  }
+  function dpMonTick(){
+    if(dpMon.hidden)return;
+    const{sentG,liveG,diffG,diff}=dpMonSummary();
+    dpMonGrid($('dpMonSent'),sentG,false);
+    dpMonGrid($('dpMonLive'),liveG,false);
+    dpMonGrid($('dpMonDiff'),diffG,true);
+    const age=padLastSentAt<0?null:Math.round(performance.now()-padLastSentAt);
+    $('dpMonState').textContent=dpConnected?'닷패드 연결됨':'닷패드 없음 (프레임은 계산됨)';
+    $('dpMonMatch').innerHTML=diff===0
+      ? '<span class="dpmon-ok">일치</span>'
+      : '<span class="dpmon-diff">'+diff+'핀 다름</span>';
+    $('dpMonSends').textContent='전송 '+padStats.sent+'회 · 합쳐짐 '+padStats.coalesced
+      +'회 · 중복차단 '+padStats.deduped+'회 · 최근 '+padStats.lastDiff+'핀('+padStats.lastReason+')';
+    $('dpMonAge').textContent=(age===null?'없음':age+'ms 전')+' · 대기시간 '+padCooldown+'ms';
+    $('dpMonPending').textContent=padPending?'있음 (곧 전송)':'없음';
+    $('dpMonBrl').textContent=(padLastBrl||'—')+(padLastBrl!==brailleLine()?'  ← 현재와 다름':'');
+    $('dpMonLog').textContent=padLog.slice(0,12).join('\n')||'전송 없음';
+  }
+  function dpMonOpen(on){
+    dpMon.hidden=!on;
+    if(on){if(!dpMonTimer)dpMonTimer=setInterval(dpMonTick,120);dpMonTick()}
+    else{clearInterval(dpMonTimer);dpMonTimer=0}
+    const b=$('dpMonBtn');if(b)b.setAttribute('aria-pressed',String(on));
+    speak(on?S('닷패드 모니터를 열었습니다.','DotPad monitor opened.'):S('닷패드 모니터를 닫았습니다.','DotPad monitor closed.'));
+  }
+  $('dpMonClose').addEventListener('click',()=>dpMonOpen(false));
+  $('dpMonClear').addEventListener('click',()=>{padLog.length=0;padStats.sent=0;padStats.coalesced=0;padStats.deduped=0;dpMonTick()});
+  $('dpMonCopy').addEventListener('click',()=>{
+    const{diff}=dpMonSummary();
+    const txt=['DOT BLOCKS 닷패드 모니터 요약',
+      '모드: '+mode+' / 속도: '+settings.speed+' / 회전: '+rotateDir+' / STACK_TEXTURE: '+STACK_TEXTURE,
+      '닷패드 연결: '+(dpConnected?'예':'아니오'),
+      '불일치: '+diff+'핀',
+      '전송 '+padStats.sent+'회, 합쳐짐 '+padStats.coalesced+'회, 중복차단 '+padStats.deduped+'회',
+      '마지막 전송: '+(padLastSentAt<0?'없음':Math.round(performance.now()-padLastSentAt)+'ms 전')
+        +', 변경 '+padStats.lastDiff+'핀, 사유 '+padStats.lastReason+', 대기시간 '+padCooldown+'ms',
+      '대기 프레임: '+(padPending?'있음':'없음'),
+      '점자(전송): '+padLastBrl,'점자(현재): '+brailleLine(),
+      '','전송 로그',...padLog.slice(0,30)].join('\n');
+    try{navigator.clipboard.writeText(txt)}catch(e){}
+    $('dpMonLog').textContent=txt;
+  });
+
   // ---------- DOTPAD ----------
   function handleDotPadKey(keyCode){
     if(!KeyCodes)return;document.body.classList.add('kbd');ensureAudio();
@@ -1248,7 +1408,7 @@
   async function connectAndStart(){if(!dpConnected)await connectDotPad();showPlay();newGame()}
 
   // ---------- INPUT / UI ----------
-  document.addEventListener('keydown',ev=>{const k=ev.key;document.body.classList.add('kbd');ensureAudio();if(!introScreen.hidden){if(k==='1'||k==='2'||k==='3'){setDifficulty(Number(k)-1);ev.preventDefault();return}if(k==='p'||k==='P'){puzzleModeBtn.click();ev.preventDefault();return}if(k==='Enter'){showPlay();newGame();ev.preventDefault();return}}if(k==='Escape'&&!settingsDrawer.hidden){closeDrawer();ev.preventDefault();return}if(k==='1'){setMode('drop',true);ev.preventDefault();return}if(k==='2'){setMode('puzzle',true);ev.preventDefault();return}if(k==='h'||k==='H'||k==='?'){tutorial();ev.preventDefault();return}if(k==='n'||k==='N'){confirmedRestart();ev.preventDefault();return}if(k==='o'||k==='O'){toggleOrientation();ev.preventDefault();return}if(k==='s'||k==='S'){readStatus(false);ev.preventDefault();return}if(k==='d'||k==='D'){readStatus(true);ev.preventDefault();return}if(k==='v'||k==='V'){readNextHold();ev.preventDefault();return}if(k==='q'||k==='Q'){toggleScan();ev.preventDefault();return}if(k==='Enter'&&over){confirmedRestart();ev.preventDefault();return}
+  document.addEventListener('keydown',ev=>{const k=ev.key;document.body.classList.add('kbd');ensureAudio();if(!introScreen.hidden){if(k==='1'||k==='2'||k==='3'){setDifficulty(Number(k)-1);ev.preventDefault();return}if(k==='p'||k==='P'){puzzleModeBtn.click();ev.preventDefault();return}if(k==='Enter'){showPlay();newGame();ev.preventDefault();return}}if(k==='Escape'&&!settingsDrawer.hidden){closeDrawer();ev.preventDefault();return}if(k==='1'){setMode('drop',true);ev.preventDefault();return}if(k==='2'){setMode('puzzle',true);ev.preventDefault();return}if(k==='h'||k==='H'||k==='?'){tutorial();ev.preventDefault();return}if(k==='n'||k==='N'){confirmedRestart();ev.preventDefault();return}if(k==='o'||k==='O'){toggleOrientation();ev.preventDefault();return}if(k==='s'||k==='S'){readStatus(false);ev.preventDefault();return}if(k==='d'||k==='D'){readStatus(true);ev.preventDefault();return}if(k==='v'||k==='V'){readNextHold();ev.preventDefault();return}if(k==='q'||k==='Q'){toggleScan();ev.preventDefault();return}if(k==='m'||k==='M'){dpMonOpen(dpMon.hidden);ev.preventDefault();return}if(k==='Enter'&&over){confirmedRestart();ev.preventDefault();return}
     if(mode==='drop'){if(k==='ArrowLeft')moveDrop(-1,0);else if(k==='ArrowRight')moveDrop(1,0);else if(k==='ArrowDown')moveDrop(0,1);else if(k==='ArrowUp'||k==='x'||k==='X')rotateDrop();else if(k===' ')confirmedHardDrop();else if(k==='c'||k==='C')holdDrop();else if(k==='p'||k==='P')togglePause();else if(k==='f'||k==='F')padLocateCurrent();else return;ev.preventDefault()}
     else{if(k==='ArrowLeft')movePuzzle(-1,0);else if(k==='ArrowRight')movePuzzle(1,0);else if(k==='ArrowUp')movePuzzle(0,-1);else if(k==='ArrowDown')movePuzzle(0,1);else if(k==='r'||k==='R')rotatePuzzle();else if(k==='Tab')cyclePuzzle();else if(k===' '||k==='Enter')placePuzzle();else if(k==='f'||k==='F')padLocateCurrent();else return;ev.preventDefault()}});
   DIFFS.forEach((d,i)=>$(d.id).addEventListener('click',()=>setDifficulty(i)));
@@ -1302,6 +1462,7 @@
   musicStyleSelect.value=settings.musicStyle;musicStyleSelect.addEventListener('change',()=>{settings.musicStyle=musicStyleSelect.value;audio.setMusicStyle(settings.musicStyle);saveSettings();speak(settings.musicStyle==='retro'?S('레트로 칩튠 배경음악으로 바꿨어요.','Switched to retro chiptune music.'):S('기본 앰비언트 배경음악으로 바꿨어요.','Switched to the default ambient music.'))});
   speedSelect.value=settings.speed;speedSelect.addEventListener('change',()=>{settings.speed=speedSelect.value;saveSettings();speak(S('낙하 방식을 '+speedSelect.options[speedSelect.selectedIndex].text+'로 설정했습니다.','Drop style changed.'))});
   setToggle(speechToggle,'speechState',settings.speech);setToggle(sfxToggle,'sfxState',settings.sfx);setToggle(musicToggle,'musicState',settings.music);setToggle(assistToggle,'assistState',settings.assist);syncSpeechModeAria();
+  $('dpMonBtn').addEventListener('click',()=>dpMonOpen(dpMon.hidden));
   pinToggle.addEventListener('click',()=>{const on=pinwrap.classList.toggle('show');pinToggle.setAttribute('aria-pressed',String(on));if(on)drawPin()});
 
   let pointerStart=null;
@@ -1313,7 +1474,8 @@
   function applyLang(){if(LANG!=='en')return;document.documentElement.lang='en';document.title='DOT BLOCKS';$('blindBadge').textContent='BLIND-FIRST';$('scoreTitle').textContent='Game Stats';$('scoreLabel').textContent='Score';$('secondaryLabel').textContent='Lines';$('levelLabel').textContent='Level';$('bestLabel').textContent='Best';$('nextTitle').textContent='Next Piece';$('holdTitle').textContent='Held Piece';$('holdHint').textContent='C / F1+F2';$('verticalTitle').textContent='Portrait DotPad';$('orientationText').innerHTML='<strong>40×60 logical pins</strong> rotate automatically into the physical 60×40 output. Stand the DotPad with controls at the bottom.';$('legend').innerHTML='<span class="legend-sample outline" aria-hidden="true"></span><span>Completely filled surface: settled and moving blocks</span><span class="legend-sample solid" aria-hidden="true"></span><span>F1+F3: highlight just your piece</span><span class="legend-sample ghost" aria-hidden="true"></span><span>Horizontal line: landing preview</span>';$('trayTitle').textContent='Pieces';$('controlsTitle').textContent='Controls';$('padKeysTitle').textContent='DotPad Keys';$('accessTitle').textContent='Audio & Accessibility';$('speechLabel').textContent='Speech guidance';$('speechModeLabel').textContent='Speech source';speechModeSelect.options[0].text='SuperDot TTS';speechModeSelect.options[1].text='Screen reader only';speechModeSelect.options[2].text='Both';$('sfxLabel').textContent='Directional earcons';$('musicLabel').textContent='Procedural music';$('assistLabel').textContent='Tactile-friendly lock delay';$('spawnHoldLabel').textContent='Always pause new piece';$('speedLabel').textContent='Drop speed';speedSelect.options[0].text='Tactile slow';speedSelect.options[1].text='Tactile turn-based';speedSelect.options[2].text='Relaxed';speedSelect.options[3].text='Standard';speedSelect.options[4].text='Challenge';$('musicStyleLabel').textContent='Music style';musicStyleSelect.options[0].text='Default (original ambient/chiptune)';musicStyleSelect.options[1].text='Retro classic (secondary)';$('newLabel').textContent='Start';$('pauseLabel').textContent='Pause';$('statusLabel').textContent='Status';$('scanLabel').textContent='Surface scan';$('helpLabel').textContent='How to play';$('orientationLabel').textContent=rotateDir==='cw'?'Rotate: right':'Rotate: left';$('dpLabel').textContent='Connect DotPad';$('introDpLabel').textContent='Connect DotPad & start';$('pinLabel').textContent='Pin preview';$('playHelp').textContent='← → move · ↑ rotate · ↓ down (again on floor = lock) · Space×2 hard drop · C hold';syncSoundBtn();$('pinCap').innerHTML='Portrait 40×60<br>filled=blocks · line=landing · F1+F3=locate';$('introTitleText').textContent='DOT BLOCKS';$('introEyebrow').textContent='Tactile block game';$('introTagline').textContent='Build by touch, navigate by sound.';$('introDesc').textContent='Stand the DotPad upright and play without the screen.';$('diffPracticeName').textContent='Practice';$('diffPracticeDesc').textContent='Nothing falls on its own. Take your time and feel it out.';$('diffBasicName').textContent='Basic';$('diffBasicDesc').textContent='Falls very slowly. Best for playing by touch.';$('diffChallengeName').textContent='Challenge';$('diffChallengeDesc').textContent='Falls at familiar Tetris speed.';$('puzzleModeName').textContent='Bonus mode · Block Puzzle';$('introAccess').textContent='Enter to start without DotPad · 1/2/3 difficulty · P Block Puzzle';$('settingsTitle').textContent='Game Settings';$('pauseTitle').textContent='Paused';$('pauseDesc').textContent='The game and falling piece are paused. The current DotPad pin state is preserved.';$('resumeBtn').textContent='Resume';$('pauseHomeBtn').textContent='Back to Intro';$('resultTitle').textContent='Game Over';$('restartBtn').textContent='Play Again';$('resultHomeBtn').textContent='Choose Another Mode';setToggle(speechToggle,'speechState',settings.speech);setToggle(sfxToggle,'sfxState',settings.sfx);setToggle(musicToggle,'musicState',settings.music);setToggle(assistToggle,'assistState',settings.assist)}
 
   {const i=DIFFS.findIndex(d=>d.speed===settings.speed);if(i>=0)diffIndex=i}
-  applyLang();syncSoundBtn();setMode(params.get('mode')==='puzzle'?'puzzle':'drop',false);showIntro();loadSDK();if(params.get('preview')==='1'){pinwrap.classList.add('show');pinToggle.setAttribute('aria-pressed','true');drawPin()}
+  applyLang();syncSoundBtn();setMode(params.get('mode')==='puzzle'?'puzzle':'drop',false);showIntro();loadSDK();if(params.get('monitor')==='1')dpMonOpen(true);
+  if(params.get('preview')==='1'){pinwrap.classList.add('show');pinToggle.setAttribute('aria-pressed','true');drawPin()}
   tw('ready',{modes:['drop','puzzle'],lang:LANG});twSize();
 })();
 </script>
