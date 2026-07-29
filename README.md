@@ -209,6 +209,9 @@
 ## 📁 기술 파일
 
 - `index.html`: UI, 게임 규칙, 촉각 프레임, DotPad 입출력
+  - `STACK_TEXTURE`: 쌓인 블록의 핀 질감 (`'full'` / `'layers'` / `'pieces'`)
+  - `PAD_MIN_INTERVAL`: 닷패드 최소 전송 간격. 동일 프레임은 보내지 않고, 간격 안에 들어온
+    프레임은 보관 후 내보내 최종 상태가 유실되지 않게 합니다
 - `audio-engine.js`: CC0 절차형 BGM과 방향 이어콘
 - `tts.js`: 음성 코어 로더 (호스트의 `/tts.js`가 있으면 그쪽 `TW_TTS`에 자리를 넘김)
 - `superdot-tts-core.js`: 슈퍼닷 TTS 구현

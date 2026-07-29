@@ -790,7 +790,7 @@
          desync them and scramble every boundary on the board. */
       const keep=dBoard.map(row=>!row.every(Boolean));
       dPieceId=dPieceId.filter((_,i)=>keep[i]);dBoard=dBoard.filter((_,i)=>keep[i]);
-      while(dBoard.length<DROP_H){dBoard.unshift(new Uint8Array(DROP_W));dPieceId.unshift(new Uint16Array(DROP_W))}combo++;const prevLevel=level;const base=[0,100,300,500,800][cleared.length]*level,comboBonus=Math.max(0,combo)*50*level;score+=base+comboBonus;lines+=cleared.length;level=1+Math.floor(lines/10);audio.setLevel(level);audio.earcon('clear',{count:cleared.length});if(cleared.length>=3)bumpBoard('shake',320);const fxScore='+'+(base+comboBonus);if(level>prevLevel)showFx(S('레벨 '+level+'!','LEVEL '+level+'!'),fxScore,'level');else if(cleared.length>=4)showFx(S('테트리스!','TETRIS!'),fxScore,'tetris');else if(combo>0)showFx(S('콤보 ×'+(combo+1),'COMBO ×'+(combo+1)),fxScore);else showFx(S(cleared.length+'줄 클리어',cleared.length+' LINE CLEAR'),fxScore);const comboText=combo>0?S(', 콤보 '+(combo+1),' combo '+(combo+1)):'';announce(S(cleared.length+'줄 완성'+comboText+'.',cleared.length+' line'+(cleared.length>1?'s':'')+' cleared'+comboText+'.'),{phase:'play',tts:true});if(dpConnected)await padLineFlash(cleared)}else{combo=-1;
+      while(dBoard.length<DROP_H){dBoard.unshift(new Uint8Array(DROP_W));dPieceId.unshift(new Uint16Array(DROP_W))}combo++;const prevLevel=level;const base=[0,100,300,500,800][cleared.length]*level,comboBonus=Math.max(0,combo)*50*level;score+=base+comboBonus;lines+=cleared.length;level=1+Math.floor(lines/10);audio.setLevel(level);audio.earcon('clear',{count:cleared.length});if(cleared.length>=3)bumpBoard('shake',320);const fxScore='+'+(base+comboBonus);if(level>prevLevel)showFx(S('레벨 '+level+'!','LEVEL '+level+'!'),fxScore,'level');else if(cleared.length>=4)showFx(S('테트리스!','TETRIS!'),fxScore,'tetris');else if(combo>0)showFx(S('콤보 ×'+(combo+1),'COMBO ×'+(combo+1)),fxScore);else showFx(S(cleared.length+'줄 클리어',cleared.length+' LINE CLEAR'),fxScore);const comboText=combo>0?S(', 콤보 '+(combo+1),' combo '+(combo+1)):'';announce(S(cleared.length+'줄 완성'+comboText+'.',cleared.length+' line'+(cleared.length>1?'s':'')+' cleared'+comboText+'.'),{phase:'play',tts:true});}else{combo=-1;
       /* Only when nothing cleared: the clear flash already owns the pins otherwise, and
          stacking a second burst on top is what overloads the pad. Two frames total. */
       if(dpConnected)await padLockPulse(landed)}
@@ -1036,7 +1036,13 @@
   }
   function buildPortraitFrame(){
     if(locateOverrideFrame)return locateOverrideFrame;
-    const g=blankPortrait();if(mode==='drop'){if(flashRows.length){for(const y of flashRows)for(let x=0;x<DROP_W;x++)fillTactileCell(g,x,y,4,3,'flash');return g}
+    const g=blankPortrait();if(mode==='drop'){
+      /* flashRows used to short-circuit here and return a frame containing ONLY the rows
+         about to be cleared, throwing the rest of the board away. The screen never did
+         that — it keeps the board and just paints those rows white — so for the length of
+         the flash the pins showed a completely different picture from the display. It also
+         cost frames the pad could not afford. The clear is signalled by earcon and speech;
+         the pins simply go from "before" to "after". */
       if(scanMode){const heights=stackHeights();for(let x=0;x<DROP_W;x++){const y=Math.max(0,DROP_H-heights[x]);if(heights[x]>0)fillTactileCell(g,x,y,4,3,'surface')}if(active)for(const[cx,cy]of active.cells){const x=active.x+cx,y=active.y+cy;if(y>=0)fillTactileCell(g,x,y,4,3,'active')}}
       else{for(let y=0;y<DROP_H;y++)for(let x=0;x<DROP_W;x++)if(dBoard[y]&&dBoard[y][x])fillTactileCell(g,x,y,4,3,'solid',sameDropPiece(x,y));if(active){const gy=ghostY();for(const[cx,cy]of active.cells){const x=active.x+cx,y=gy+cy;if(y>=0)fillTactileCell(g,x,y,4,3,'ghost')}for(const[cx,cy]of active.cells){const x=active.x+cx,y=active.y+cy;if(y>=0)fillTactileCell(g,x,y,4,3,'active')}}}
       /* Danger no longer bakes a persistent rail into every frame — a stack that
@@ -1084,9 +1090,48 @@
     return bytes.slice(0,20).map(b=>(b<16?'0':'')+b.toString(16)).join('')
   }
   function drawPin(){if(!pinwrap.classList.contains('show'))return;const g=buildPortraitFrame(),W=pin.clientWidth||136,H=W*1.5,dpr=window.devicePixelRatio||1;pin.style.height=H+'px';pin.width=Math.round(W*dpr);pin.height=Math.round(H*dpr);pctx.setTransform(dpr,0,0,dpr,0,0);pctx.clearRect(0,0,W,H);pctx.fillStyle='#e8e2d8';pctx.fillRect(0,0,W,H);const gapX=W/PORTRAIT_W,gapY=H/PORTRAIT_H;for(let y=0;y<PORTRAIT_H;y++)for(let x=0;x<PORTRAIT_W;x++){const on=g[y][x],r=(on?.34:.13)*Math.min(gapX,gapY);pctx.fillStyle=on?'#191714':'#cfc8bc';pctx.beginPath();pctx.arc((x+.5)*gapX,(y+.5)*gapY,r,0,Math.PI*2);pctx.fill()}}
-  function renderPad(){if(!dpConnected||!sdk)return;try{const h=portraitToHardware(buildPortraitFrame());sdk.displayGraphicData(encodeHardware(h));sdk.displayTextData(brailleLine())}catch(e){}}
+  /* The pad was being flooded. renderPad() runs from renderAll(), so every move,
+     rotation, spawn, lock and score update pushed a full 600-hex graphic frame plus a
+     braille line, and a line clear pushed six frames inside ~350ms. A DotPad cannot
+     actuate a full screen that fast, so the frames queued up behind the SDK's per-line
+     ACK and the pins visibly lagged seconds behind the screen.
+
+     Two guards. Identical frames are never re-sent, which kills the many redundant
+     renderAll() calls outright. And sends are spaced by at least PAD_MIN_INTERVAL; a
+     frame arriving inside that window is remembered rather than sent, then flushed when
+     the window expires — so bursts collapse to their final state instead of replaying
+     every intermediate one, and the last frame is never the one that gets dropped. */
+  const PAD_MIN_INTERVAL=170;
+  let padLastHex='',padLastBrl='',padLastSentAt=-1e9,padPending=null,padFlushTimer=0;
+  function padSend(hex,brl){
+    padLastHex=hex;padLastBrl=brl;padLastSentAt=performance.now();
+    try{sdk.displayGraphicData(hex);sdk.displayTextData(brl)}catch(e){}
+  }
+  function padFlush(){
+    padFlushTimer=0;
+    if(!padPending||!dpConnected||!sdk){padPending=null;return}
+    const p=padPending;padPending=null;padSend(p.hex,p.brl);
+  }
+  /* force: deliberate pulse sequences (locate, danger, lock) already pace themselves with
+     await and their whole point is the alternation, so they bypass the spacing. They still
+     go through the duplicate check. */
+  function renderPad(force=false){
+    if(!dpConnected||!sdk)return;
+    let hex,brl;
+    try{hex=encodeHardware(portraitToHardware(buildPortraitFrame()));brl=brailleLine()}catch(e){return}
+    if(hex===padLastHex&&brl===padLastBrl){padPending=null;return}
+    const now=performance.now(),since=now-padLastSentAt;
+    if(!force&&since<PAD_MIN_INTERVAL){
+      padPending={hex,brl};
+      if(!padFlushTimer)padFlushTimer=setTimeout(padFlush,PAD_MIN_INTERVAL-since);
+      return;
+    }
+    if(padFlushTimer){clearTimeout(padFlushTimer);padFlushTimer=0}
+    padPending=null;padSend(hex,brl);
+  }
+  function padResetCache(){padLastHex='';padLastBrl='';padPending=null;if(padFlushTimer){clearTimeout(padFlushTimer);padFlushTimer=0}}
   function wait(ms){return new Promise(r=>setTimeout(r,ms))}
-  async function padPulse(){if(!dpConnected||!sdk)return;try{for(let i=0;i<3;i++){sdk.displayAllUp&&sdk.displayAllUp();await wait(70);sdk.displayAllDown&&sdk.displayAllDown();await wait(55)}renderPad()}catch(e){}}
+  async function padPulse(){if(!dpConnected||!sdk)return;try{for(let i=0;i<3;i++){sdk.displayAllUp&&sdk.displayAllUp();await wait(70);sdk.displayAllDown&&sdk.displayAllDown();await wait(55)}padResetCache();renderPad(true)}catch(e){}}
   // Danger no longer bakes a persistent rail into the board (see buildPortraitFrame).
   // Instead, entering a danger level fires this two-pulse edge flash on top of
   // whatever the board currently shows, then hands back to the normal frame —
@@ -1100,10 +1145,10 @@
       for(let i=0;i<2;i++){
         const g=cloneFrame(buildPortraitFrame());
         for(let y=0;y<depth;y+=step){setPin(g,0,y);setPin(g,39,y)}
-        locateOverrideFrame=g;renderPad();drawPin();await wait(140);
-        locateOverrideFrame=null;renderPad();drawPin();await wait(90);
+        locateOverrideFrame=g;renderPad(true);drawPin();await wait(200);
+        locateOverrideFrame=null;renderPad(true);drawPin();await wait(170);
       }
-    }catch(e){}finally{locateOverrideFrame=null;renderPad();drawPin()}
+    }catch(e){}finally{locateOverrideFrame=null;renderPad(true);drawPin()}
   }
   // On-demand tactile re-locate (F1+F3 / keyboard F): instead of a continuous
   // pulse on the active piece (which would add 200+ extra BLE actuations per
@@ -1125,16 +1170,16 @@
       const withActive=cloneFrame(locked);
       if(mode==='drop'){for(const[cx,cy]of active.cells){const x=active.x+cx,y=active.y+cy;if(y>=0)fillTactileCell(withActive,x,y,4,3,'flash')}}
       else{const p=currentPuzzlePiece();for(const[cx,cy]of p.cells)fillTactileCell(withActive,cursorX+cx,cursorY+cy,5,5,'flash')}
-      for(let i=0;i<2;i++){locateOverrideFrame=withActive;renderPad();drawPin();await wait(130);locateOverrideFrame=locked;renderPad();drawPin();await wait(90)}
+      for(let i=0;i<2;i++){locateOverrideFrame=withActive;renderPad(true);drawPin();await wait(200);locateOverrideFrame=locked;renderPad(true);drawPin();await wait(170)}
       if(mode==='drop'){
         const gy=ghostY(),withGhost=cloneFrame(locked);
         for(const[cx,cy]of active.cells){const x=active.x+cx,y=gy+cy;if(y>=0)fillTactileCell(withGhost,x,y,4,3,'flash')}
-        locateOverrideFrame=withGhost;renderPad();drawPin();await wait(170);
+        locateOverrideFrame=withGhost;renderPad(true);drawPin();await wait(220);
       }
     }catch(e){}
     locateOverrideFrame=null;
     if(mode==='drop'&&!wasPaused){paused=false;audio.start();dropLast=performance.now()}
-    renderAll();
+    renderPad(true);renderAll();
     locating=false;
   }
   /* One-shot confirmation of where a piece just landed: highlight only that piece's
@@ -1145,10 +1190,9 @@
     try{
       const g=cloneFrame(buildPortraitFrame());
       for(const[x,y]of cells)fillTactileCell(g,x,y,cw,ch,'flash');
-      locateOverrideFrame=g;renderPad();drawPin();await wait(150);
-    }catch(e){}finally{locateOverrideFrame=null;renderPad();drawPin()}
+      locateOverrideFrame=g;renderPad(true);drawPin();await wait(220);
+    }catch(e){}finally{locateOverrideFrame=null;renderPad(true);drawPin()}
   }
-  async function padLineFlash(rows){if(!dpConnected||!sdk||!rows.length)return;try{for(let i=0;i<2;i++){flashRows=rows.slice();renderPad();await wait(75);flashRows=[];renderPad();await wait(60)}}catch(e){}finally{flashRows=[]}}
 
   function clearConfirm(){confirmAction='';confirmUntil=0}
   function confirmActionTwice(name,prompt,action){
@@ -1194,7 +1238,7 @@
       if(keyCode===KeyCodes.KeyFunction1)movePuzzle(-1,0);else if(keyCode===KeyCodes.KeyFunction2)movePuzzle(1,0);else if(keyCode===KeyCodes.KeyFunction3)movePuzzle(0,-1);else if(keyCode===KeyCodes.KeyFunction4)movePuzzle(0,1);else if(keyCode===KeyCodes.PanningLeft)rotatePuzzle();else if(keyCode===KeyCodes.PanningRight)cyclePuzzle();else if(keyCode===KeyCodes.PanningAll||keyCode===KeyCodes.KeyFunction23)placePuzzle();else if(keyCode===KeyCodes.KeyFunction12)readPuzzleStatus(true);else if(keyCode===KeyCodes.RPF4)readPuzzleStatus(false);else if(keyCode===KeyCodes.LPF1)confirmedRestart();else if(keyCode===KeyCodes.KeyFunction13)padLocateCurrent()
     }
   }
-  async function loadSDK(){try{const m=await import(new URL('./dotpad-sdk/DotPadSDK-3.0.0.js',document.baseURI).href);KeyCodes=m.KeyCodes;DataCodes=m.DataCodes;sdk=new m.DotPadSDK();scanner=new m.DotPadScanner();sdk.setCallBack((device,code)=>{if(code===DataCodes.Connected){dpConnected=true;setDpUI(true);setTimeout(()=>{try{sdk.displayAllDown();setTimeout(renderPad,250)}catch(e){}},180)}else if(code===DataCodes.Disconnected){dpConnected=false;setDpUI(false)}},(device,keyCode)=>handleDotPadKey(keyCode));return true}catch(e){console.error('[DOT BLOCKS] dotpad-sdk/DotPadSDK-3.0.0.js를 불러오지 못했습니다. index.html은 단독 파일이 아니라 audio-engine.js·tts.js·superdot-tts-core.js 등 형제 파일과 같은 폴더에 있어야 합니다.',e);return false}}
+  async function loadSDK(){try{const m=await import(new URL('./dotpad-sdk/DotPadSDK-3.0.0.js',document.baseURI).href);KeyCodes=m.KeyCodes;DataCodes=m.DataCodes;sdk=new m.DotPadSDK();scanner=new m.DotPadScanner();sdk.setCallBack((device,code)=>{if(code===DataCodes.Connected){dpConnected=true;setDpUI(true);setTimeout(()=>{try{sdk.displayAllDown();padResetCache();setTimeout(()=>renderPad(true),250)}catch(e){}},180)}else if(code===DataCodes.Disconnected){dpConnected=false;setDpUI(false)}},(device,keyCode)=>handleDotPadKey(keyCode));return true}catch(e){console.error('[DOT BLOCKS] dotpad-sdk/DotPadSDK-3.0.0.js를 불러오지 못했습니다. index.html은 단독 파일이 아니라 audio-engine.js·tts.js·superdot-tts-core.js 등 형제 파일과 같은 폴더에 있어야 합니다.',e);return false}}
   function setDpUI(on){dpBtn.dataset.on=on?'1':'0';$('dpLabel').textContent=on?S('닷패드 연결됨','DotPad connected'):S('닷패드 연결','Connect DotPad');$('introDpLabel').textContent=on?S('닷패드 연결됨 · 시작','DotPad connected · Start'):S('닷패드 연결하고 시작','Connect DotPad & start');if(on){padMenu=introScreen.hidden?null:'intro';speak(S('닷패드가 연결됐어요. 기기를 세로로 세우세요. 인트로에서는 F1 시작, F2 난이도 바꾸기, F3 도움말, F4 설정, F1+F2 블록 퍼즐입니다.','DotPad connected. Stand it vertically. On the intro screen, F1 starts, F2 changes difficulty, F3 help, F4 settings, F1 plus F2 Block Puzzle.'))}}
   async function connectDotPad(){if(!navigator.bluetooth){announce(S('이 브라우저는 블루투스를 지원하지 않아요. 크롬이나 엣지에서 열어 주세요.','Bluetooth is not supported. Open in Chrome or Edge.'),{phase:'ready',tts:true});return}if(!sdk){await loadSDK();if(!sdk){announce(S('닷패드 SDK 파일을 찾지 못했어요. 게임 폴더 전체를 함께 열어야 합니다.','Could not find the DotPad SDK file. The whole game folder needs to be served together.'),{phase:'ready',tts:true});return}}try{let dev=null;try{dev=await navigator.bluetooth.requestDevice({filters:[{namePrefix:'DotPad'},{namePrefix:'KM2-'},{namePrefix:'KM3-'},{namePrefix:'DPK'},{namePrefix:'DMI'}],optionalServices:[scanner.DOTPAD_SERVICE]})}catch(e){if(e.name==='NotFoundError')dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[scanner.DOTPAD_SERVICE]});else throw e}if(dev){announce(S('닷패드에 연결 중…','Connecting to DotPad…'),{phase:'ready',tts:false});await sdk.connectBleDevice(dev)}}catch(e){if(e.name!=='NotFoundError')announce(S('닷패드 연결 실패: ','DotPad connection failed: ')+(e.message||e.name),{phase:'ready',tts:true})}}
   // Single hero CTA for the booth flow: try to connect, then start the currently
