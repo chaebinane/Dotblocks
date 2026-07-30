@@ -13,41 +13,93 @@
   const semitone = n => NOTE * Math.pow(2, n / 12);
 
   /*
-   * Retro preset melody source: "Korobeiniki" (Коробейники), a Russian folk song
-   * first published in 1861 and long in the public domain worldwide.
+   * PUBLIC DOMAIN MELODY PRESETS
    *
-   * The note sequence below is the traditional folk melody. The arrangement around
-   * it — voicing, bass line, percussion, panning, tempo/danger response — was
-   * written from scratch for DOT BLOCKS and is released under CC0 with the rest of
-   * this file. It is NOT transcribed from, and does not reproduce, any commercial
-   * game soundtrack or copyrighted arrangement of this melody.
+   * Every melody here is a traditional or long-expired-copyright tune. The
+   * arrangements around them — voicing, bass line, percussion, panning, and the
+   * tempo/danger response — were written from scratch for DOT BLOCKS and are
+   * released under CC0 with the rest of this file. None of them is transcribed
+   * from, and none reproduces, any commercial game soundtrack or any copyrighted
+   * arrangement of these melodies.
    *
-   * Values are semitone offsets from A4 (semitone(0) === 440 Hz), paired with a
-   * duration in sixteenth-note steps. Eight bars of 4/4 = 128 steps total.
+   * Note that copyright and trademark are separate matters. These melodies are
+   * free to use; the "Tetris" name is a trademark of The Tetris Company and is
+   * deliberately not used anywhere in this project.
+   *
+   * Melody values are semitone offsets from A4 (semitone(0) === 440 Hz) paired
+   * with a duration in sixteenth-note steps. Bass values are one root per bar of
+   * 4/4 (16 steps). Loop length is derived from the melody, rounded up to a whole
+   * bar, so a tune can be any length without touching the scheduler.
    */
-  const RETRO_MELODY = [
-    [7, 4], [2, 2], [3, 2], [5, 4], [3, 2], [2, 2],
-    [0, 4], [0, 2], [3, 2], [7, 4], [5, 2], [3, 2],
-    [2, 6], [3, 2], [5, 4], [7, 4],
-    [3, 4], [0, 4], [0, 8],
-    [5, 6], [8, 2], [12, 4], [10, 2], [8, 2],
-    [7, 6], [3, 2], [7, 4], [5, 2], [3, 2],
-    [2, 4], [2, 2], [3, 2], [5, 4], [7, 4],
-    [3, 4], [0, 4], [0, 8]
-  ];
-  const RETRO_LOOP_STEPS = 128;
-  // One bass root per bar (E minor): Em Em Bm Em Dm Am B Em
-  const RETRO_BASS = [7, 7, 2, 7, 5, 0, 2, 7];
-  // Flattened step -> note-onset lookup, built once at load.
-  const RETRO_STEPS = (() => {
-    const map = new Array(RETRO_LOOP_STEPS).fill(null);
+  const TUNES = {
+    /* "Korobeiniki" (Коробейники) — Russian folk song, published 1861. */
+    retro: {
+      title: 'Korobeiniki',
+      melody: [
+        [7, 4], [2, 2], [3, 2], [5, 4], [3, 2], [2, 2],
+        [0, 4], [0, 2], [3, 2], [7, 4], [5, 2], [3, 2],
+        [2, 6], [3, 2], [5, 4], [7, 4],
+        [3, 4], [0, 4], [0, 8],
+        [5, 6], [8, 2], [12, 4], [10, 2], [8, 2],
+        [7, 6], [3, 2], [7, 4], [5, 2], [3, 2],
+        [2, 4], [2, 2], [3, 2], [5, 4], [7, 4],
+        [3, 4], [0, 4], [0, 8]
+      ],
+      // Em Em Bm Em Dm Am B Em
+      bass: [7, 7, 2, 7, 5, 0, 2, 7],
+      wave: 'square'
+    },
+    /* "Kalinka" — Ivan Larionov, 1860. Larionov died in 1889, so the work is in
+       the public domain worldwide. Refrain only, in A minor. */
+    kalinka: {
+      title: 'Kalinka',
+      melody: [
+        [7, 2], [7, 2], [7, 2], [5, 2], [3, 2], [2, 2], [0, 4],
+        [3, 2], [2, 2], [0, 4], [0, 2], [2, 2], [3, 4],
+        [7, 2], [8, 2], [7, 2], [5, 2], [3, 2], [2, 2], [0, 4],
+        [3, 2], [2, 2], [0, 8],
+        [12, 2], [10, 2], [8, 2], [7, 2], [5, 2], [3, 2], [2, 4],
+        [0, 4], [3, 2], [2, 2], [0, 4], [0, 4],
+        [7, 2], [5, 2], [3, 2], [2, 2], [0, 4],
+        [3, 2], [2, 2], [0, 8]
+      ],
+      // Am Am Em Am Am Em Am Am
+      bass: [0, 0, 7, 0, 0, 7, 0, 0],
+      wave: 'square'
+    },
+    /* "Dance of the Sugar Plum Fairy" from The Nutcracker — Pyotr Ilyich
+       Tchaikovsky, 1892. Tchaikovsky died in 1893; the work is in the public
+       domain worldwide. Opening celesta figure, in E minor. */
+    sugarplum: {
+      title: 'Dance of the Sugar Plum Fairy',
+      melody: [
+        [7, 2], [2, 2], [-1, 2], [2, 2], [7, 2], [5, 2], [3, 2], [2, 2],
+        [1, 2], [-3, 2], [0, 2], [3, 2], [1, 4], [-3, 4],
+        [7, 2], [2, 2], [-1, 2], [2, 2], [7, 2], [5, 2], [3, 2], [2, 2],
+        [1, 2], [-3, 2], [0, 2], [3, 2], [2, 8],
+        [12, 2], [10, 2], [9, 2], [7, 2], [5, 2], [3, 2], [2, 2], [0, 2],
+        [-1, 4], [2, 4], [7, 4], [2, 4],
+        [7, 2], [5, 2], [3, 2], [2, 2], [-1, 4], [2, 8]
+      ],
+      // Em Em B7 Em Em B7 Em Em — sparse, so the celesta figure stays exposed
+      bass: [7, 7, 2, 7, 7, 2, 7, 7],
+      wave: 'triangle'
+    }
+  };
+  const TUNE_IDS = Object.keys(TUNES);
+  /* Flattened step -> note-onset lookup per tune, built once at load. */
+  for (const id of TUNE_IDS) {
+    const t = TUNES[id];
+    let total = 0;
+    for (const [, dur] of t.melody) total += dur;
+    t.loopSteps = Math.max(16, Math.ceil(total / 16) * 16);
+    t.steps = new Array(t.loopSteps).fill(null);
     let cursor = 0;
-    for (const [note, dur] of RETRO_MELODY) {
-      if (cursor < RETRO_LOOP_STEPS) map[cursor] = { note, dur };
+    for (const [note, dur] of t.melody) {
+      if (cursor < t.loopSteps) t.steps[cursor] = { note, dur };
       cursor += dur;
     }
-    return map;
-  })();
+  }
 
   class DotBlocksAudioEngine {
     constructor() {
@@ -124,14 +176,20 @@
     }
 
     setMusicStyle(style) {
-      const next = style === 'retro' ? 'retro' : 'procedural';
+      const next = TUNES[style] ? style : 'procedural';
       if (next === this.musicStyle) return;
       this.musicStyle = next;
       this.step = 0;
     }
 
+    /* Every tune preset shares one scheduler; only the note table differs. */
+    tune() {
+      return TUNES[this.musicStyle] || null;
+    }
+
     loopLength() {
-      return this.musicStyle === 'retro' ? RETRO_LOOP_STEPS : 32;
+      const t = this.tune();
+      return t ? t.loopSteps : 32;
     }
 
     setLevel(level) {
@@ -208,7 +266,7 @@
     }
 
     scheduleMusicStep(step, at) {
-      if (this.musicStyle === 'retro') return this.scheduleRetroStep(step, at);
+      if (this.tune()) return this.scheduleTuneStep(step, at);
       if (this.mode === 'puzzle') {
         const degrees = [0, 4, 7, 11, 7, 4, 2, 7];
         if (step % 2 === 0) this.tone(semitone(-17 + degrees[(step / 2) % degrees.length]), 0.42, at, 'sine', 0.11, this.musicBus, -0.2);
@@ -229,25 +287,27 @@
       }
     }
 
-    scheduleRetroStep(step, at) {
+    scheduleTuneStep(step, at) {
+      const tune = this.tune();
+      if (!tune) return;
       const stepSeconds = 60 / this.tempo() / 4;
       const calm = this.mode === 'puzzle';
-      const hit = RETRO_STEPS[step];
+      const hit = tune.steps[step];
       if (hit) {
         // Slight gap before the next note so repeated pitches stay articulated.
         const dur = Math.max(0.08, hit.dur * stepSeconds * 0.9);
         this.tone(
           semitone(hit.note), dur, at,
-          calm ? 'triangle' : 'square',
+          calm ? 'triangle' : tune.wave,
           calm ? 0.055 : 0.062,
           this.musicBus,
           step % 32 < 16 ? -0.14 : 0.14
         );
       }
       if (step % 4 === 0) {
-        const bar = Math.floor(step / 16) % RETRO_BASS.length;
+        const bar = Math.floor(step / 16) % tune.bass.length;
         const beat = (step / 4) % 4;
-        const root = RETRO_BASS[bar];
+        const root = tune.bass[bar];
         // Alternate root and fifth for a walking chiptune bass.
         const degree = beat % 2 === 0 ? root : root + 7;
         this.tone(semitone(-24 + degree), stepSeconds * 3.1, at, 'triangle', calm ? 0.06 : 0.08, this.musicBus, 0);
