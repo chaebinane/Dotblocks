@@ -303,6 +303,18 @@
   /* Native <option> inherits the OS palette, so on the dark panel the list rendered
      near-black on near-black and only the highlighted row was readable. Both the closed
      control and the open list need explicit colours. */
+  .padmap{display:grid;gap:6px;margin:8px 0 4px}
+  .padmap h3{margin:8px 0 2px;font-size:11.5px;font-weight:700;color:var(--ink-secondary);letter-spacing:.02em}
+  .padmap-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;font-size:12px;font-weight:600;color:var(--ink-secondary)}
+  .padmap-row select{
+    appearance:none;-webkit-appearance:none;background-color:#151a22;color:var(--ink);
+    border:1px solid rgb(255 255 255 / 18%);border-radius:8px;padding:7px 28px 7px 10px;min-height:36px;
+    max-width:min(50vw,190px);font-size:12px;font-weight:600;cursor:pointer;text-overflow:ellipsis;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23c7cedb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6l6 -6'/></svg>");
+    background-repeat:no-repeat;background-position:right 9px center
+  }
+  .padmap-row select option{background-color:#151a22;color:#e6eaf0}
+  .padmap-row select option:checked{background-color:var(--accent);color:#0a0c0f}
   .speed-row select{
     appearance:none;-webkit-appearance:none;
     background-color:#151a22;color:var(--ink);
@@ -560,10 +572,17 @@
       <button class="toggle" id="musicToggle" type="button" aria-pressed="true"><span id="musicLabel">절차형 배경음악</span><span id="musicState">켜짐</span></button>
       <button class="toggle" id="assistToggle" type="button" aria-pressed="true"><span id="assistLabel">촉각 친화 잠금 유예</span><span id="assistState">켜짐</span></button>
       <button class="toggle" id="spawnHoldToggle" type="button" aria-pressed="false"><span id="spawnHoldLabel">새 블록 항상 정지</span><span id="spawnHoldState">꺼짐</span></button>
+      <div class="speed-row"><label for="sfxVolumeSelect" id="sfxVolumeLabel">효과음 크기</label><select id="sfxVolumeSelect"><option value="quiet">작게</option><option value="normal">보통</option><option value="loud">크게</option><option value="max">아주 크게</option></select></div>
       <div class="speed-row"><label for="musicVolumeSelect" id="musicVolumeLabel">배경음악 크기</label><select id="musicVolumeSelect"><option value="quiet">작게</option><option value="normal">보통</option><option value="loud">크게</option><option value="max">아주 크게</option></select></div>
       <div class="speed-row"><label for="musicStyleSelect" id="musicStyleLabel">배경음악 스타일</label><select id="musicStyleSelect"><option value="procedural">기본 (오리지널 앰비언트/칩튠)</option><option value="retro">코로베이니키 (러시아 민요, 1861)</option><option value="kalinka">칼린카 (라리오노프, 1860)</option><option value="sugarplum">설탕요정의 춤 (차이콥스키, 1892)</option></select></div>
       <div class="speed-row"><label for="speedSelect" id="speedLabel">낙하 속도</label><select id="speedSelect"><option value="tactile">촉각 저속</option><option value="turn">촉각 턴제</option><option value="relaxed">여유</option><option value="standard">표준</option><option value="challenge">도전</option></select></div>
     </div></section>
+    <section class="sidecard"><h2 id="padMapTitle">닷패드 키 설정</h2>
+      <div class="helptext" id="padMapHelp">동작마다 원하는 닷패드 키를 고르세요. 이미 쓰는 키를 고르면 먼저 쓰던 동작의 키가 해제됩니다. F1+F4는 설정 열기로 고정되어 바꿀 수 없습니다.</div>
+      <div class="padmap" id="padMapDrop"></div>
+      <div class="padmap" id="padMapPuzzle"></div>
+      <div class="dpmon-actions"><button type="button" id="padMapReset">기본값으로 되돌리기</button></div>
+    </section>
     <section class="sidecard"><h2>진단</h2><div class="toggle-list"><button class="toggle" id="dpMonBtn" type="button" aria-pressed="false"><span>닷패드 모니터</span><b id="dpMonBtnState">M 키</b></button></div><div class="helptext">실제로 닷패드에 전송된 프레임과 지금 게임판을 나란히 비교합니다. 어긋나면 차이 나는 핀을 붉게 표시합니다.</div></section>
     <section class="sidecard"><h2 id="verticalTitle">세로 닷패드</h2><div class="orientation" id="orientationText"><strong>40×60 논리 핀</strong>을 실제 60×40 출력으로 자동 회전합니다.</div><div class="legend" id="legend"><span class="legend-sample outline" aria-hidden="true"></span><span>빈틈 없이 꽉 찬 면: 쌓인 블록과 움직이는 블록</span><span class="legend-sample solid" aria-hidden="true"></span><span>F1+F3: 지금 블록만 강조해서 위치 확인</span><span class="legend-sample ghost" aria-hidden="true"></span><span>가로로 이어진 선: 예상 착지</span></div></section>
   </aside>
@@ -631,7 +650,7 @@
   let diffIndex=1;
   const newBtn=$('newBtn'),pauseBtn=$('pauseBtn'),helpBtn=$('helpBtn'),statusBtn=$('statusBtn'),scanBtn=$('scanBtn');
   const orientationBtn=$('orientationBtn'),dpBtn=$('dpBtn'),pinToggle=$('pinToggle');
-  const speechToggle=$('speechToggle'),sfxToggle=$('sfxToggle'),musicToggle=$('musicToggle'),assistToggle=$('assistToggle'),spawnHoldToggle=$('spawnHoldToggle'),speedSelect=$('speedSelect'),musicStyleSelect=$('musicStyleSelect'),musicVolumeSelect=$('musicVolumeSelect'),speechModeSelect=$('speechModeSelect');
+  const speechToggle=$('speechToggle'),sfxToggle=$('sfxToggle'),musicToggle=$('musicToggle'),assistToggle=$('assistToggle'),spawnHoldToggle=$('spawnHoldToggle'),speedSelect=$('speedSelect'),musicStyleSelect=$('musicStyleSelect'),musicVolumeSelect=$('musicVolumeSelect'),sfxVolumeSelect=$('sfxVolumeSelect'),speechModeSelect=$('speechModeSelect');
   const pinwrap=$('pinwrap'),pin=$('pin'),pctx=pin.getContext('2d');
   const introScreen=$('introScreen'),stage=$('stage'),startSelectedBtn=$('startSelectedBtn'),introConnectBtn=$('introConnectBtn');
   const homeBtn=$('homeBtn'),menuBtn=$('menuBtn'),drawerBackdrop=$('drawerBackdrop'),settingsDrawer=$('settingsDrawer'),drawerClose=$('drawerClose');
@@ -649,7 +668,8 @@
        silence instead of throwing on the first call we forgot to stub. */
     const noop=()=>{},stub={};
     for(const m of ['ensure','start','stop','pause','duck','microDuck','earcon','setDanger','setLevel',
-                    'setMode','setMusicEnabled','setMusicStyle','setSfxEnabled','setMusicVolume'])stub[m]=noop;
+                    'setMode','setMusicEnabled','setMusicStyle','setSfxEnabled','setMusicVolume',
+                    'setSfxVolume'])stub[m]=noop;
     return stub;
   })();
   /* superdot-tts-core picks server-vs-browser voice from the hostname, and it
@@ -657,17 +677,20 @@
      endpoint exists only on the Dot Games host, and we are only there when
      embedded, so drive it from frame detection instead. */
   if(window.SUPERDOT_TTS&&SUPERDOT_TTS.config){const embedded=window.parent!==window;SUPERDOT_TTS.config({serverFirst:embedded,retry:embedded})}
-  let settings={speech:true,speechMode:'superdot',sfx:true,music:true,assist:true,spawnHold:false,speed:'tactile',musicStyle:'retro',musicVolume:'normal'};
+  let settings={speech:true,speechMode:'superdot',sfx:true,music:true,assist:true,spawnHold:false,speed:'tactile',musicStyle:'retro',musicVolume:'normal',sfxVolume:'normal'};
   try{settings={...settings,...JSON.parse(localStorage.getItem('dotblocks-settings')||'{}')}}catch(e){}
   settings.speed=['tactile','turn','relaxed','standard','challenge'].includes(settings.speed)?settings.speed:'tactile';
   const MUSIC_STYLES=['procedural','retro','kalinka','sugarplum'];
   const MUSIC_VOLUMES={quiet:0.18,normal:0.30,loud:0.45,max:0.60};
   const MUSIC_VOLUME_KEYS=Object.keys(MUSIC_VOLUMES);
   settings.musicVolume=MUSIC_VOLUME_KEYS.includes(settings.musicVolume)?settings.musicVolume:'normal';
+  const SFX_VOLUMES={quiet:0.26,normal:0.46,loud:0.66,max:0.86};
+  const SFX_VOLUME_KEYS=Object.keys(SFX_VOLUMES);
+  settings.sfxVolume=SFX_VOLUME_KEYS.includes(settings.sfxVolume)?settings.sfxVolume:'normal';
   settings.musicStyle=MUSIC_STYLES.includes(settings.musicStyle)?settings.musicStyle:'retro';
   settings.speechMode=['superdot','screenreader','both'].includes(settings.speechMode)?settings.speechMode:'superdot';
   settings.spawnHold=settings.spawnHold===true;
-  audio.setMusicEnabled(settings.music);audio.setSfxEnabled(settings.sfx);audio.setMusicStyle(settings.musicStyle);audio.setMusicVolume(MUSIC_VOLUMES[settings.musicVolume]);
+  audio.setMusicEnabled(settings.music);audio.setSfxEnabled(settings.sfx);audio.setMusicStyle(settings.musicStyle);audio.setMusicVolume(MUSIC_VOLUMES[settings.musicVolume]);audio.setSfxVolume(SFX_VOLUMES[settings.sfxVolume]);
 
   let mode=null,running=false,paused=false,over=true,scanMode=false,scanResume=false,isAnimating=false;
   let rotateDir=params.get('rotate')==='ccw'?'ccw':'cw';
@@ -696,7 +719,7 @@
   function pieceExposureMap(){try{return JSON.parse(storageGet('dotblocks-piece-exposure')||'{}')}catch(e){return{}}}
   function pieceExposureCount(type){return Number(pieceExposureMap()[type])||0}
   function bumpPieceExposure(type){const m=pieceExposureMap();m[type]=(m[type]||0)+1;storageSet('dotblocks-piece-exposure',JSON.stringify(m))}
-  const PAD_SETTING_KEYS=['speech','speechMode','sfx','music','musicVolume','assist','spawnHold','speed','musicStyle','resync'];
+  const PAD_SETTING_KEYS=['speech','speechMode','sfx','sfxVolume','music','musicVolume','assist','spawnHold','speed','musicStyle','resync'];
 
   // Original palette, deliberately distinct from the canonical Tetris color scheme.
   // The board is monochrome on purpose: a DotPad pin is either raised or flat,
@@ -709,7 +732,9 @@
     S:[[1,0],[2,0],[0,1],[1,1]],Z:[[0,0],[1,0],[1,1],[2,1]],J:[[0,0],[0,1],[1,1],[2,1]],L:[[2,0],[0,1],[1,1],[2,1]]
   };
   const SHAPE_KEYS=Object.keys(SHAPES);
-  const PIECE_NAMES={I:S('긴 막대','long bar'),O:S('네모','square'),T:S('티 모양','T shape'),S:S('에스 모양','S shape'),Z:S('지 모양','Z shape'),J:S('제이 모양','J shape'),L:S('엘 모양','L shape')};
+  /* Standard tetromino names. These also line up with the braille letters in B_PIECE
+   below, so the spoken name and the cell under the finger now agree exactly. */
+  const PIECE_NAMES={I:S('I미노','I piece'),O:S('O미노','O piece'),T:S('T미노','T piece'),S:S('S미노','S piece'),Z:S('Z미노','Z piece'),J:S('J미노','J piece'),L:S('L미노','L piece')};
 
   let dBoard=[],active=null,nextType='I',holdType=null,holdUsed=false,bag=[],score=0,lines=0,level=1,combo=-1;
   /* Which settled piece each cell came from. dBoard only stores the piece TYPE, so two
@@ -904,11 +929,11 @@
     // mid-drop, so it stays to the essentials: piece, columns, cells to landing.
     // Everything else (score, next, hold, column heights, holes) moves to the detailed tier.
     if(!detailed){
-      speak(S(PIECE_NAMES[active.type]+', '+pieceColumnRange(active)+', 착지 '+distance+'칸.',
-              PIECE_NAMES[active.type]+', '+pieceColumnRange(active)+', '+distance+' to landing.'));
+      speak(S(PIECE_NAMES[active.type]+', 착지 '+distance+'칸.',
+              PIECE_NAMES[active.type]+', '+distance+' to landing.'));
       return;
     }
-    let text=S('현재 '+PIECE_NAMES[active.type]+', '+orientationName(active.cells)+', '+pieceColumnRange(active)+'. '+Math.max(1,active.y+1)+'행. 착지까지 '+distance+'칸. 예상 바닥 '+Math.min(DROP_H,gy+b.h)+'행. ','Current '+PIECE_NAMES[active.type]+', '+orientationName(active.cells)+', '+pieceColumnRange(active)+'. Row '+Math.max(1,active.y+1)+'. '+distance+' cells to landing. Expected bottom row '+Math.min(DROP_H,gy+b.h)+'. ');
+    let text=S('현재 '+PIECE_NAMES[active.type]+', '+orientationName(active.cells)+'. '+Math.max(1,active.y+1)+'행. 착지까지 '+distance+'칸. 예상 바닥 '+Math.min(DROP_H,gy+b.h)+'행. ','Current '+PIECE_NAMES[active.type]+', '+orientationName(active.cells)+'. Row '+Math.max(1,active.y+1)+'. '+distance+' cells to landing. Expected bottom row '+Math.min(DROP_H,gy+b.h)+'. ');
     text+=S('점수 '+score+', '+lines+'줄, 레벨 '+level+'. 다음 '+PIECE_NAMES[nextType]+(holdType?', 보관 '+PIECE_NAMES[holdType]:'')+'.','Score '+score+', '+lines+' lines, level '+level+'. Next '+PIECE_NAMES[nextType]+(holdType?', held '+PIECE_NAMES[holdType]:'')+'.');
     text+=S(' 열 높이는 왼쪽부터 '+heights.join(', ')+'. 가장 높은 곳 '+max+'칸, 내부 빈칸 '+holes+'개.',' Column heights from left are '+heights.join(', ')+'. Maximum height '+max+', enclosed holes '+holes+'.');
     speak(text);
@@ -1008,7 +1033,7 @@
   function bumpBoard(cls,ms){if(!canvasWrap)return;canvasWrap.classList.remove(cls);void canvasWrap.offsetWidth;canvasWrap.classList.add(cls);setTimeout(()=>canvasWrap.classList.remove(cls),ms)}
   function popStat(el,val){if(!el)return;const next=String(val);if(el.textContent!==next){el.textContent=next;el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop')}}
   function updateHud(){const sc=mode==='drop'?score:pScore,sec=mode==='drop'?lines:pClears,lv=mode==='drop'?level:(pTray.length?pTray.filter(p=>!p.used).length:3);popStat(scoreValue,sc);popStat(secondaryValue,sec);popStat(levelValue,lv);setBest()}
-  function updateBoardAria(){if(mode==='drop'&&active){const b=pieceBounds(active.cells),gy=ghostY();boardCanvas.setAttribute('aria-label',S('낙하형 블록 게임. 현재 '+PIECE_NAMES[active.type]+', '+pieceColumnRange(active)+', '+Math.max(1,active.y+1)+'행, 예상 바닥 '+Math.min(DROP_H,gy+b.h)+'행. 점수 '+score+'.','Falling block game. Current '+PIECE_NAMES[active.type]+', '+pieceColumnRange(active)+', row '+Math.max(1,active.y+1)+', expected bottom row '+Math.min(DROP_H,gy+b.h)+'. Score '+score+'.'))}else if(mode==='puzzle'){const p=currentPuzzlePiece();if(p)boardCanvas.setAttribute('aria-label',S('블록 퍼즐. '+p.name+', '+(cursorY+1)+'행 '+(cursorX+1)+'열, '+(canPlacePuzzle(p,cursorX,cursorY)?'놓을 수 있음':'겹침')+'. 점수 '+pScore+'.','Block puzzle. '+p.name+', row '+(cursorY+1)+', column '+(cursorX+1)+', '+(canPlacePuzzle(p,cursorX,cursorY)?'valid':'overlap')+'. Score '+pScore+'.'))}}
+  function updateBoardAria(){if(mode==='drop'&&active){const b=pieceBounds(active.cells),gy=ghostY();boardCanvas.setAttribute('aria-label',S('낙하형 블록 게임. 현재 '+PIECE_NAMES[active.type]+', '+Math.max(1,active.y+1)+'행, 예상 바닥 '+Math.min(DROP_H,gy+b.h)+'행. 점수 '+score+'.','Falling block game. Current '+PIECE_NAMES[active.type]+', row '+Math.max(1,active.y+1)+', expected bottom row '+Math.min(DROP_H,gy+b.h)+'. Score '+score+'.'))}else if(mode==='puzzle'){const p=currentPuzzlePiece();if(p)boardCanvas.setAttribute('aria-label',S('블록 퍼즐. '+p.name+', '+(cursorY+1)+'행 '+(cursorX+1)+'열, '+(canPlacePuzzle(p,cursorX,cursorY)?'놓을 수 있음':'겹침')+'. 점수 '+pScore+'.','Block puzzle. '+p.name+', row '+(cursorY+1)+', column '+(cursorX+1)+', '+(canPlacePuzzle(p,cursorX,cursorY)?'valid':'overlap')+'. Score '+pScore+'.'))}}
 
   function toggleScan(){
     if(over||!running){readStatus(true);return}
@@ -1357,17 +1382,17 @@
   }
   function confirmedHardDrop(){return confirmActionTwice('hardDrop',S('즉시 낙하 확인. 1.8초 안에 같은 키를 한 번 더 누르세요.','Hard drop confirmation. Press the same key again within 1.8 seconds.'),hardDrop)}
   function confirmedRestart(){return confirmActionTwice('restart',S('다시 시작 확인. 1.8초 안에 F1을 한 번 더 누르세요.','Restart confirmation. Press F1 again within 1.8 seconds.'),newGame)}
-  function padSettingName(key){return {speech:S('음성 안내','speech guidance'),speechMode:S('음성 안내 방식','speech source'),sfx:S('방향 효과음','directional effects'),music:S('배경음악','music'),assist:S('잠금 유예','lock delay'),spawnHold:S('새 블록 항상 정지','always pause new piece'),speed:S('낙하 방식','drop style'),musicStyle:S('음악 스타일','music style'),musicVolume:S('배경음악 크기','music volume'),resync:S('핀 다시 그리기','redraw pins')}[key]}
-  function padSettingValue(key){if(key==='resync')return S('F3을 누르면 실행','press F3 to run');if(key==='musicVolume')return{quiet:S('작게','quiet'),normal:S('보통','normal'),loud:S('크게','loud'),max:S('아주 크게','maximum')}[settings.musicVolume];if(key==='speechMode')return {superdot:S('슈퍼닷 TTS','SuperDot TTS'),screenreader:S('스크린리더만','screen reader only'),both:S('둘 다','both')}[settings.speechMode];if(key==='speed')return {tactile:S('촉각 저속','tactile slow'),turn:S('촉각 턴제','tactile turn based'),relaxed:S('여유','relaxed'),standard:S('표준','standard'),challenge:S('도전','challenge')}[settings.speed];if(key==='musicStyle')return{procedural:S('오리지널 앰비언트','original ambient'),retro:S('코로베이니키','Korobeiniki'),kalinka:S('칼린카','Kalinka'),sugarplum:S('설탕요정의 춤','Sugar Plum Fairy')}[settings.musicStyle];return settings[key]?S('켜짐','on'):S('꺼짐','off')}
+  function padSettingName(key){return {speech:S('음성 안내','speech guidance'),speechMode:S('음성 안내 방식','speech source'),sfx:S('방향 효과음','directional effects'),music:S('배경음악','music'),assist:S('잠금 유예','lock delay'),spawnHold:S('새 블록 항상 정지','always pause new piece'),speed:S('낙하 방식','drop style'),musicStyle:S('음악 스타일','music style'),musicVolume:S('배경음악 크기','music volume'),sfxVolume:S('효과음 크기','effects volume'),resync:S('핀 다시 그리기','redraw pins')}[key]}
+  function padSettingValue(key){if(key==='resync')return S('F3을 누르면 실행','press F3 to run');if(key==='musicVolume'||key==='sfxVolume')return{quiet:S('작게','quiet'),normal:S('보통','normal'),loud:S('크게','loud'),max:S('아주 크게','maximum')}[settings[key]];if(key==='speechMode')return {superdot:S('슈퍼닷 TTS','SuperDot TTS'),screenreader:S('스크린리더만','screen reader only'),both:S('둘 다','both')}[settings.speechMode];if(key==='speed')return {tactile:S('촉각 저속','tactile slow'),turn:S('촉각 턴제','tactile turn based'),relaxed:S('여유','relaxed'),standard:S('표준','standard'),challenge:S('도전','challenge')}[settings.speed];if(key==='musicStyle')return{procedural:S('오리지널 앰비언트','original ambient'),retro:S('코로베이니키','Korobeiniki'),kalinka:S('칼린카','Kalinka'),sugarplum:S('설탕요정의 춤','Sugar Plum Fairy')}[settings.musicStyle];return settings[key]?S('켜짐','on'):S('꺼짐','off')}
   function announcePadSetting(){const key=PAD_SETTING_KEYS[padSettingIndex];speak((padSettingIndex+1)+'/'+PAD_SETTING_KEYS.length+'. '+padSettingName(key)+', '+padSettingValue(key)+'. '+S('F1 이전, F2 다음, F3 변경, F4 닫기.','F1 previous, F2 next, F3 change, F4 close.'))}
   function syncSettingUI(){
     setToggle(speechToggle,'speechState',settings.speech);setToggle(sfxToggle,'sfxState',settings.sfx);setToggle(musicToggle,'musicState',settings.music);setToggle(assistToggle,'assistState',settings.assist);setToggle(spawnHoldToggle,'spawnHoldState',settings.spawnHold);
-    speechModeSelect.value=settings.speechMode;speedSelect.value=settings.speed;musicStyleSelect.value=settings.musicStyle;musicVolumeSelect.value=settings.musicVolume;syncSpeechModeAria();syncSoundBtn();saveSettings()
+    speechModeSelect.value=settings.speechMode;speedSelect.value=settings.speed;musicStyleSelect.value=settings.musicStyle;musicVolumeSelect.value=settings.musicVolume;sfxVolumeSelect.value=settings.sfxVolume;syncSpeechModeAria();syncSoundBtn();saveSettings()
   }
   function enterPadSettings(){padMenu='settings';padSettingIndex=0;clearConfirm();announcePadSetting()}
   function changePadSetting(){const key=PAD_SETTING_KEYS[padSettingIndex];
     if(key==='resync'){speak(S('핀을 다시 그립니다.','Redrawing the pins.'));padForceResync('설정 메뉴');return}
-    if(key==='speechMode'){const a=['superdot','screenreader','both'];settings.speechMode=a[(a.indexOf(settings.speechMode)+1)%a.length]}else if(key==='speed'){const a=['tactile','turn','relaxed','standard','challenge'];settings.speed=a[(a.indexOf(settings.speed)+1)%a.length]}else if(key==='musicStyle'){settings.musicStyle=MUSIC_STYLES[(MUSIC_STYLES.indexOf(settings.musicStyle)+1)%MUSIC_STYLES.length];audio.setMusicStyle(settings.musicStyle)}else if(key==='musicVolume'){settings.musicVolume=MUSIC_VOLUME_KEYS[(MUSIC_VOLUME_KEYS.indexOf(settings.musicVolume)+1)%MUSIC_VOLUME_KEYS.length];audio.setMusicVolume(MUSIC_VOLUMES[settings.musicVolume])}else{settings[key]=!settings[key];if(key==='sfx')audio.setSfxEnabled(settings.sfx);if(key==='music')audio.setMusicEnabled(settings.music)}syncSettingUI();announcePadSetting()}
+    if(key==='speechMode'){const a=['superdot','screenreader','both'];settings.speechMode=a[(a.indexOf(settings.speechMode)+1)%a.length]}else if(key==='speed'){const a=['tactile','turn','relaxed','standard','challenge'];settings.speed=a[(a.indexOf(settings.speed)+1)%a.length]}else if(key==='musicStyle'){settings.musicStyle=MUSIC_STYLES[(MUSIC_STYLES.indexOf(settings.musicStyle)+1)%MUSIC_STYLES.length];audio.setMusicStyle(settings.musicStyle)}else if(key==='musicVolume'){settings.musicVolume=MUSIC_VOLUME_KEYS[(MUSIC_VOLUME_KEYS.indexOf(settings.musicVolume)+1)%MUSIC_VOLUME_KEYS.length];audio.setMusicVolume(MUSIC_VOLUMES[settings.musicVolume])}else if(key==='sfxVolume'){settings.sfxVolume=SFX_VOLUME_KEYS[(SFX_VOLUME_KEYS.indexOf(settings.sfxVolume)+1)%SFX_VOLUME_KEYS.length];audio.setSfxVolume(SFX_VOLUMES[settings.sfxVolume]);audio.earcon('move')}else{settings[key]=!settings[key];if(key==='sfx')audio.setSfxEnabled(settings.sfx);if(key==='music')audio.setMusicEnabled(settings.music)}syncSettingUI();announcePadSetting()}
   function handlePadSettingsKey(keyCode){if(keyCode===KeyCodes.KeyFunction1){padSettingIndex=(padSettingIndex+PAD_SETTING_KEYS.length-1)%PAD_SETTING_KEYS.length;announcePadSetting()}else if(keyCode===KeyCodes.KeyFunction2){padSettingIndex=(padSettingIndex+1)%PAD_SETTING_KEYS.length;announcePadSetting()}else if(keyCode===KeyCodes.KeyFunction3){changePadSetting()}else if(keyCode===KeyCodes.KeyFunction4){padMenu=introScreen.hidden?null:'intro';speak(S('설정을 닫았습니다.','Settings closed.'))}}
 
 
@@ -1427,6 +1452,39 @@
     const b=$('dpMonBtn');if(b)b.setAttribute('aria-pressed',String(on));
     speak(on?S('닷패드 모니터를 열었습니다.','DotPad monitor opened.'):S('닷패드 모니터를 닫았습니다.','DotPad monitor closed.'));
   }
+  function renderPadMap(){
+    for(const m of ['drop','puzzle']){
+      const host=$(m==='drop'?'padMapDrop':'padMapPuzzle');
+      host.innerHTML='<h3>'+(m==='drop'?S('낙하 모드','Drop mode'):S('블록 퍼즐','Block Puzzle'))+'</h3>';
+      for(const [action,def] of Object.entries(PAD_ACTIONS)){
+        if(!def.modes.includes(m))continue;
+        const row=document.createElement('div');row.className='padmap-row';
+        const id='padmap-'+m+'-'+action;
+        const lab=document.createElement('label');lab.setAttribute('for',id);lab.textContent=def.label;
+        const sel=document.createElement('select');sel.id=id;
+        const none=document.createElement('option');none.value='';none.textContent=S('없음','None');sel.appendChild(none);
+        for(const k of PAD_KEY_IDS){
+          if(k==='KeyFunction14')continue;   // 설정 열기 전용으로 예약
+          const o=document.createElement('option');o.value=k;o.textContent=PAD_KEY_LABELS[k];sel.appendChild(o);
+        }
+        sel.value=settings.padMap[m][action]||'';
+        sel.addEventListener('change',()=>{
+          const key=sel.value;
+          if(key)for(const [other,k] of Object.entries(settings.padMap[m]))
+            if(other!==action&&k===key)settings.padMap[m][other]='';   // 한 키에 두 동작이 붙지 않게
+          settings.padMap[m][action]=key;
+          rebuildPadReverse();saveSettings();renderPadMap();
+          speak(key?S(def.label+'을(를) '+PAD_KEY_LABELS[key]+'로 바꿨어요.',def.label+' mapped to '+PAD_KEY_LABELS[key]+'.')
+                   :S(def.label+' 키를 해제했어요.',def.label+' unmapped.'));
+        });
+        row.append(lab,sel);host.appendChild(row);
+      }
+    }
+  }
+  $('padMapReset').addEventListener('click',()=>{
+    settings.padMap=clonePadMap(DEFAULT_PAD_MAP);rebuildPadReverse();saveSettings();renderPadMap();
+    speak(S('닷패드 키를 기본값으로 되돌렸어요.','DotPad keys reset to defaults.'));
+  });
   $('dpMonResync').addEventListener('click',()=>padForceResync('모니터'));
   $('dpMonClose').addEventListener('click',()=>dpMonOpen(false));
   $('dpMonClear').addEventListener('click',()=>{padLog.length=0;padStats.sent=0;padStats.coalesced=0;padStats.deduped=0;dpMonTick()});
@@ -1448,6 +1506,58 @@
   });
 
   // ---------- DOTPAD ----------
+  /* ---------- REMAPPABLE DOTPAD KEYS ----------
+     The dispatch used to be a hard-coded if/else chain per mode. It is now a table so the
+     binding can be edited in settings and persisted. settings.padMap holds action -> key
+     per mode; the reverse lookup is what the handler actually uses, rebuilt whenever the
+     map changes. Anything not listed falls through and does nothing. */
+  const PAD_KEY_IDS=['KeyFunction1','KeyFunction2','KeyFunction3','KeyFunction4',
+    'KeyFunction12','KeyFunction13','KeyFunction14','KeyFunction23','KeyFunction24','KeyFunction34',
+    'PanningLeft','PanningRight','PanningAll','LPF1','RPF4'];
+  const PAD_KEY_LABELS={KeyFunction1:'F1',KeyFunction2:'F2',KeyFunction3:'F3',KeyFunction4:'F4',
+    KeyFunction12:'F1+F2',KeyFunction13:'F1+F3',KeyFunction14:S('F1+F4 (설정 고정)','F1+F4 (settings, fixed)'),
+    KeyFunction23:'F2+F3',KeyFunction24:'F2+F4',KeyFunction34:'F3+F4',
+    PanningLeft:S('왼쪽 패닝','Left pan'),PanningRight:S('오른쪽 패닝','Right pan'),PanningAll:S('전체 패닝','All pan'),
+    LPF1:S('왼쪽 패닝+F1','Left pan + F1'),RPF4:S('오른쪽 패닝+F4','Right pan + F4')};
+  const PAD_ACTIONS={
+    moveLeft:{label:S('왼쪽으로','Move left'),modes:['drop','puzzle'],run:()=>mode==='drop'?moveDrop(-1,0):movePuzzle(-1,0)},
+    moveRight:{label:S('오른쪽으로','Move right'),modes:['drop','puzzle'],run:()=>mode==='drop'?moveDrop(1,0):movePuzzle(1,0)},
+    moveUp:{label:S('위로','Move up'),modes:['puzzle'],run:()=>movePuzzle(0,-1)},
+    moveDown:{label:S('아래로 한 칸','Move down'),modes:['drop','puzzle'],run:()=>mode==='drop'?moveDrop(0,1):movePuzzle(0,1)},
+    rotate:{label:S('회전','Rotate'),modes:['drop','puzzle'],run:()=>mode==='drop'?rotateDrop():rotatePuzzle()},
+    hold:{label:S('블록 보관','Hold piece'),modes:['drop'],run:()=>holdDrop()},
+    hardDrop:{label:S('즉시 낙하','Hard drop'),modes:['drop'],run:()=>confirmedHardDrop()},
+    place:{label:S('배치','Place'),modes:['puzzle'],run:()=>placePuzzle()},
+    cycle:{label:S('다음 블록 선택','Next piece'),modes:['puzzle'],run:()=>cyclePuzzle()},
+    status:{label:S('현재 상태 읽기','Read status'),modes:['drop','puzzle'],run:()=>readStatus(false)},
+    detail:{label:S('상세 상태 읽기','Read detailed status'),modes:['drop','puzzle'],run:()=>readStatus(true)},
+    nextHold:{label:S('다음·보관 블록 읽기','Read next and hold'),modes:['drop'],run:()=>readNextHold()},
+    scan:{label:S('촉각 표면 스캔','Surface scan'),modes:['drop'],run:()=>toggleScan()},
+    pause:{label:S('일시정지','Pause'),modes:['drop'],run:()=>togglePause()},
+    locate:{label:S('현재 블록 위치 강조','Locate current piece'),modes:['drop','puzzle'],run:()=>padLocateCurrent()},
+    restart:{label:S('새 게임','New game'),modes:['drop','puzzle'],run:()=>confirmedRestart()},
+    resync:{label:S('핀 다시 그리기','Redraw pins'),modes:['drop','puzzle'],run:()=>{speak(S('핀을 다시 그립니다.','Redrawing the pins.'));padForceResync('키 매핑')}}
+  };
+  const DEFAULT_PAD_MAP={
+    drop:{moveLeft:'KeyFunction1',moveRight:'KeyFunction2',rotate:'KeyFunction3',moveDown:'KeyFunction4',
+      hold:'KeyFunction12',hardDrop:'PanningRight',status:'PanningLeft',scan:'PanningAll',
+      pause:'RPF4',restart:'LPF1',detail:'KeyFunction34',nextHold:'KeyFunction24',locate:'KeyFunction13',resync:''},
+    puzzle:{moveLeft:'KeyFunction1',moveRight:'KeyFunction2',moveUp:'KeyFunction3',moveDown:'KeyFunction4',
+      rotate:'PanningLeft',cycle:'PanningRight',place:'PanningAll',detail:'KeyFunction12',
+      status:'RPF4',restart:'LPF1',locate:'KeyFunction13',resync:''}
+  };
+  function clonePadMap(m){return{drop:{...m.drop},puzzle:{...m.puzzle}}}
+  if(!settings.padMap||!settings.padMap.drop||!settings.padMap.puzzle)settings.padMap=clonePadMap(DEFAULT_PAD_MAP);
+  else for(const m of ['drop','puzzle'])for(const a of Object.keys(DEFAULT_PAD_MAP[m]))
+    if(typeof settings.padMap[m][a]!=='string')settings.padMap[m][a]=DEFAULT_PAD_MAP[m][a];
+  let padReverse={drop:{},puzzle:{}};
+  function rebuildPadReverse(){
+    padReverse={drop:{},puzzle:{}};
+    for(const m of ['drop','puzzle'])
+      for(const [a,k] of Object.entries(settings.padMap[m]))
+        if(k&&KeyCodes&&KeyCodes[k]!==undefined)padReverse[m][KeyCodes[k]]=a;
+  }
+  function padActionFor(m,keyCode){return padReverse[m]?padReverse[m][keyCode]:null}
   function handleDotPadKey(keyCode){
     if(!KeyCodes)return;document.body.classList.add('kbd');ensureAudio();
     if(padMenu==='settings'){handlePadSettingsKey(keyCode);return}
@@ -1465,14 +1575,14 @@
       else if(keyCode===KeyCodes.KeyFunction4)enterPadSettings();
       return
     }
+    /* KeyFunction14 always opens settings, whatever the user has mapped. Without a
+       reserved key it is possible to unmap your way out of the settings menu and have no
+       way back in from the pad alone. */
     if(keyCode===KeyCodes.KeyFunction14||(KeyCodes.LPF4!==undefined&&keyCode===KeyCodes.LPF4)){enterPadSettings();return}
-    if(mode==='drop'){
-      if(keyCode===KeyCodes.KeyFunction1)moveDrop(-1,0);else if(keyCode===KeyCodes.KeyFunction2)moveDrop(1,0);else if(keyCode===KeyCodes.KeyFunction3)rotateDrop();else if(keyCode===KeyCodes.KeyFunction4)moveDrop(0,1);else if(keyCode===KeyCodes.KeyFunction12)holdDrop();else if(keyCode===KeyCodes.KeyFunction23||keyCode===KeyCodes.PanningRight)confirmedHardDrop();else if(keyCode===KeyCodes.PanningLeft)readDropStatus(false);else if(keyCode===KeyCodes.PanningAll)toggleScan();else if(keyCode===KeyCodes.RPF4)togglePause();else if(keyCode===KeyCodes.LPF1)confirmedRestart();else if(keyCode===KeyCodes.KeyFunction34)readDropStatus(true);else if(keyCode===KeyCodes.KeyFunction24)readNextHold();else if(keyCode===KeyCodes.KeyFunction13)padLocateCurrent()
-    }else{
-      if(keyCode===KeyCodes.KeyFunction1)movePuzzle(-1,0);else if(keyCode===KeyCodes.KeyFunction2)movePuzzle(1,0);else if(keyCode===KeyCodes.KeyFunction3)movePuzzle(0,-1);else if(keyCode===KeyCodes.KeyFunction4)movePuzzle(0,1);else if(keyCode===KeyCodes.PanningLeft)rotatePuzzle();else if(keyCode===KeyCodes.PanningRight)cyclePuzzle();else if(keyCode===KeyCodes.PanningAll||keyCode===KeyCodes.KeyFunction23)placePuzzle();else if(keyCode===KeyCodes.KeyFunction12)readPuzzleStatus(true);else if(keyCode===KeyCodes.RPF4)readPuzzleStatus(false);else if(keyCode===KeyCodes.LPF1)confirmedRestart();else if(keyCode===KeyCodes.KeyFunction13)padLocateCurrent()
-    }
+    const action=padActionFor(mode==='drop'?'drop':'puzzle',keyCode);
+    if(action&&PAD_ACTIONS[action])PAD_ACTIONS[action].run();
   }
-  async function loadSDK(){try{const m=await import(new URL('./dotpad-sdk/DotPadSDK-3.0.0.js',document.baseURI).href);KeyCodes=m.KeyCodes;DataCodes=m.DataCodes;sdk=new m.DotPadSDK();scanner=new m.DotPadScanner();sdk.setCallBack((device,code)=>{if(code===DataCodes.Connected){dpConnected=true;setDpUI(true);setTimeout(()=>{try{sdk.displayAllDown();padResetCache();setTimeout(()=>renderPad(true),250)}catch(e){}},180)}else if(code===DataCodes.Disconnected){dpConnected=false;setDpUI(false)}},(device,keyCode)=>handleDotPadKey(keyCode));return true}catch(e){console.error('[DOT BLOCKS] dotpad-sdk/DotPadSDK-3.0.0.js를 불러오지 못했습니다. index.html은 단독 파일이 아니라 audio-engine.js·tts.js·superdot-tts-core.js 등 형제 파일과 같은 폴더에 있어야 합니다.',e);return false}}
+  async function loadSDK(){try{const m=await import(new URL('./dotpad-sdk/DotPadSDK-3.0.0.js',document.baseURI).href);KeyCodes=m.KeyCodes;DataCodes=m.DataCodes;rebuildPadReverse();renderPadMap();sdk=new m.DotPadSDK();scanner=new m.DotPadScanner();sdk.setCallBack((device,code)=>{if(code===DataCodes.Connected){dpConnected=true;setDpUI(true);setTimeout(()=>{try{sdk.displayAllDown();padResetCache();setTimeout(()=>renderPad(true),250)}catch(e){}},180)}else if(code===DataCodes.Disconnected){dpConnected=false;setDpUI(false)}},(device,keyCode)=>handleDotPadKey(keyCode));return true}catch(e){console.error('[DOT BLOCKS] dotpad-sdk/DotPadSDK-3.0.0.js를 불러오지 못했습니다. index.html은 단독 파일이 아니라 audio-engine.js·tts.js·superdot-tts-core.js 등 형제 파일과 같은 폴더에 있어야 합니다.',e);return false}}
   function setDpUI(on){dpBtn.dataset.on=on?'1':'0';$('dpLabel').textContent=on?S('닷패드 연결됨','DotPad connected'):S('닷패드 연결','Connect DotPad');$('introDpLabel').textContent=on?S('닷패드 연결됨 · 시작','DotPad connected · Start'):S('닷패드 연결하고 시작','Connect DotPad & start');if(on){padMenu=introScreen.hidden?null:'intro';speak(S('닷패드가 연결됐어요. 기기를 세로로 세우세요. 인트로에서는 F1 시작, F2 난이도 바꾸기, F3 도움말, F4 설정, F1+F2 블록 퍼즐입니다.','DotPad connected. Stand it vertically. On the intro screen, F1 starts, F2 changes difficulty, F3 help, F4 settings, F1 plus F2 Block Puzzle.'))}}
   async function connectDotPad(){if(!navigator.bluetooth){announce(S('이 브라우저는 블루투스를 지원하지 않아요. 크롬이나 엣지에서 열어 주세요.','Bluetooth is not supported. Open in Chrome or Edge.'),{phase:'ready',tts:true});return}if(!sdk){await loadSDK();if(!sdk){announce(S('닷패드 SDK 파일을 찾지 못했어요. 게임 폴더 전체를 함께 열어야 합니다.','Could not find the DotPad SDK file. The whole game folder needs to be served together.'),{phase:'ready',tts:true});return}}try{let dev=null;try{dev=await navigator.bluetooth.requestDevice({filters:[{namePrefix:'DotPad'},{namePrefix:'KM2-'},{namePrefix:'KM3-'},{namePrefix:'DPK'},{namePrefix:'DMI'}],optionalServices:[scanner.DOTPAD_SERVICE]})}catch(e){if(e.name==='NotFoundError')dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[scanner.DOTPAD_SERVICE]});else throw e}if(dev){announce(S('닷패드에 연결 중…','Connecting to DotPad…'),{phase:'ready',tts:false});await sdk.connectBleDevice(dev)}}catch(e){if(e.name!=='NotFoundError')announce(S('닷패드 연결 실패: ','DotPad connection failed: ')+(e.message||e.name),{phase:'ready',tts:true})}}
   // Single hero CTA for the booth flow: try to connect, then start the currently
@@ -1535,6 +1645,8 @@
   speechModeSelect.value=settings.speechMode;speechModeSelect.addEventListener('change',()=>{settings.speechMode=speechModeSelect.value;syncSettingUI();speak(S('음성 안내 방식을 변경했습니다.','Speech source changed.'))});
   const MUSIC_STYLE_NAMES={procedural:S('기본 앰비언트','the default ambient music'),retro:S('코로베이니키','Korobeiniki'),kalinka:S('칼린카','Kalinka'),sugarplum:S('설탕요정의 춤','Dance of the Sugar Plum Fairy')};
   musicStyleSelect.value=settings.musicStyle;musicStyleSelect.addEventListener('change',()=>{settings.musicStyle=musicStyleSelect.value;audio.setMusicStyle(settings.musicStyle);saveSettings();speak(S(MUSIC_STYLE_NAMES[settings.musicStyle]+' 배경음악으로 바꿨어요.','Switched to '+MUSIC_STYLE_NAMES[settings.musicStyle]+'.'))});
+  const VOL_NAMES={quiet:S('작게','quiet'),normal:S('보통','normal'),loud:S('크게','loud'),max:S('아주 크게','maximum')};
+  sfxVolumeSelect.value=settings.sfxVolume;sfxVolumeSelect.addEventListener('change',()=>{settings.sfxVolume=sfxVolumeSelect.value;audio.setSfxVolume(SFX_VOLUMES[settings.sfxVolume]);saveSettings();audio.earcon('move');speak(S('효과음 크기를 '+VOL_NAMES[settings.sfxVolume]+'로 바꿨어요.','Effects volume set to '+VOL_NAMES[settings.sfxVolume]+'.'))});
   musicVolumeSelect.value=settings.musicVolume;musicVolumeSelect.addEventListener('change',()=>{settings.musicVolume=musicVolumeSelect.value;audio.setMusicVolume(MUSIC_VOLUMES[settings.musicVolume]);saveSettings();speak(S('배경음악 크기를 '+{quiet:'작게',normal:'보통',loud:'크게',max:'아주 크게'}[settings.musicVolume]+'로 바꿨어요.','Music volume set to '+settings.musicVolume+'.'))});
   speedSelect.value=settings.speed;speedSelect.addEventListener('change',()=>{settings.speed=speedSelect.value;saveSettings();speak(S('낙하 방식을 '+speedSelect.options[speedSelect.selectedIndex].text+'로 설정했습니다.','Drop style changed.'))});
   setToggle(speechToggle,'speechState',settings.speech);setToggle(sfxToggle,'sfxState',settings.sfx);setToggle(musicToggle,'musicState',settings.music);setToggle(assistToggle,'assistState',settings.assist);syncSpeechModeAria();
@@ -1547,10 +1659,10 @@
   window.addEventListener('resize',()=>{clearTimeout(window.__dbRz);window.__dbRz=setTimeout(()=>{renderAll();twSize()},100)});document.addEventListener('visibilitychange',()=>{if(!stage.hidden&&document.hidden&&mode==='drop'&&running&&!over&&!paused){paused=true;audio.pause();$('pauseLabel').textContent=S('계속','Resume');showPauseState();announce(S('앱이 백그라운드로 이동해 자동 일시정지했습니다.','Automatically paused while the app is in the background.'),{phase:'ready',tts:false})}});document.addEventListener('pointerdown',()=>document.body.classList.remove('kbd'));document.body.addEventListener('pointerdown',function once(){ensureAudio();try{speechSynthesis.resume()}catch(e){}document.body.removeEventListener('pointerdown',once)},{once:true});
   window.getDotpadFrame=()=>encodeHardware(portraitToHardware(buildPortraitFrame()));window.getPortraitFrame=()=>buildPortraitFrame();window.getAccessibilityState=()=>({mode,scanMode,settings:{...settings},danger:mode==='drop'?dangerLevel():0,frameLength:window.getDotpadFrame().length,brailleLine:brailleLine()});
 
-  function applyLang(){if(LANG!=='en')return;document.documentElement.lang='en';document.title='DOT BLOCKS';$('blindBadge').textContent='BLIND-FIRST';$('scoreTitle').textContent='Game Stats';$('scoreLabel').textContent='Score';$('secondaryLabel').textContent='Lines';$('levelLabel').textContent='Level';$('bestLabel').textContent='Best';$('nextTitle').textContent='Next Piece';$('holdTitle').textContent='Held Piece';$('holdHint').textContent='C / F1+F2';$('verticalTitle').textContent='Portrait DotPad';$('orientationText').innerHTML='<strong>40×60 logical pins</strong> rotate automatically into the physical 60×40 output. Stand the DotPad with controls at the bottom.';$('legend').innerHTML='<span class="legend-sample outline" aria-hidden="true"></span><span>Completely filled surface: settled and moving blocks</span><span class="legend-sample solid" aria-hidden="true"></span><span>F1+F3: highlight just your piece</span><span class="legend-sample ghost" aria-hidden="true"></span><span>Horizontal line: landing preview</span>';$('trayTitle').textContent='Pieces';$('controlsTitle').textContent='Controls';$('padKeysTitle').textContent='DotPad Keys';$('accessTitle').textContent='Audio & Accessibility';$('speechLabel').textContent='Speech guidance';$('speechModeLabel').textContent='Speech source';speechModeSelect.options[0].text='SuperDot TTS';speechModeSelect.options[1].text='Screen reader only';speechModeSelect.options[2].text='Both';$('sfxLabel').textContent='Directional earcons';$('musicLabel').textContent='Procedural music';$('assistLabel').textContent='Tactile-friendly lock delay';$('spawnHoldLabel').textContent='Always pause new piece';$('speedLabel').textContent='Drop speed';speedSelect.options[0].text='Tactile slow';speedSelect.options[1].text='Tactile turn-based';speedSelect.options[2].text='Relaxed';speedSelect.options[3].text='Standard';speedSelect.options[4].text='Challenge';$('musicStyleLabel').textContent='Music style';$('musicVolumeLabel').textContent='Music volume';musicVolumeSelect.options[0].text='Quiet';musicVolumeSelect.options[1].text='Normal';musicVolumeSelect.options[2].text='Loud';musicVolumeSelect.options[3].text='Maximum';musicStyleSelect.options[0].text='Default (original ambient/chiptune)';musicStyleSelect.options[1].text='Korobeiniki (Russian folk, 1861)';musicStyleSelect.options[2].text='Kalinka (Larionov, 1860)';musicStyleSelect.options[3].text='Dance of the Sugar Plum Fairy (Tchaikovsky, 1892)';$('newLabel').textContent='Start';$('pauseLabel').textContent='Pause';$('statusLabel').textContent='Status';$('scanLabel').textContent='Surface scan';$('helpLabel').textContent='How to play';$('orientationLabel').textContent=rotateDir==='cw'?'Rotate: right':'Rotate: left';$('dpLabel').textContent='Connect DotPad';$('introDpLabel').textContent='Connect DotPad & start';$('pinLabel').textContent='Pin preview';$('playHelp').textContent='← → move · ↑ rotate · ↓ down (again on floor = lock) · Space×2 hard drop · C hold';syncSoundBtn();$('pinCap').innerHTML='Portrait 40×60<br>filled=blocks · line=landing · F1+F3=locate';$('introTitleText').textContent='DOT BLOCKS';$('introEyebrow').textContent='Tactile block game';$('introTagline').textContent='Build by touch, navigate by sound.';$('introDesc').textContent='Stand the DotPad upright and play without the screen.';$('diffPracticeName').textContent='Practice';$('diffPracticeDesc').textContent='Nothing falls on its own. Take your time and feel it out.';$('diffBasicName').textContent='Basic';$('diffBasicDesc').textContent='Falls very slowly. Best for playing by touch.';$('diffChallengeName').textContent='Challenge';$('diffChallengeDesc').textContent='Falls at familiar Tetris speed.';$('puzzleModeName').textContent='Bonus mode · Block Puzzle';$('introAccess').textContent='Enter to start without DotPad · 1/2/3 difficulty · P Block Puzzle';$('settingsTitle').textContent='Game Settings';$('pauseTitle').textContent='Paused';$('pauseDesc').textContent='The game and falling piece are paused. The current DotPad pin state is preserved.';$('resumeBtn').textContent='Resume';$('pauseHomeBtn').textContent='Back to Intro';$('resultTitle').textContent='Game Over';$('restartBtn').textContent='Play Again';$('resultHomeBtn').textContent='Choose Another Mode';setToggle(speechToggle,'speechState',settings.speech);setToggle(sfxToggle,'sfxState',settings.sfx);setToggle(musicToggle,'musicState',settings.music);setToggle(assistToggle,'assistState',settings.assist)}
+  function applyLang(){if(LANG!=='en')return;document.documentElement.lang='en';document.title='DOT BLOCKS';$('blindBadge').textContent='BLIND-FIRST';$('scoreTitle').textContent='Game Stats';$('scoreLabel').textContent='Score';$('secondaryLabel').textContent='Lines';$('levelLabel').textContent='Level';$('bestLabel').textContent='Best';$('nextTitle').textContent='Next Piece';$('holdTitle').textContent='Held Piece';$('holdHint').textContent='C / F1+F2';$('verticalTitle').textContent='Portrait DotPad';$('orientationText').innerHTML='<strong>40×60 logical pins</strong> rotate automatically into the physical 60×40 output. Stand the DotPad with controls at the bottom.';$('legend').innerHTML='<span class="legend-sample outline" aria-hidden="true"></span><span>Completely filled surface: settled and moving blocks</span><span class="legend-sample solid" aria-hidden="true"></span><span>F1+F3: highlight just your piece</span><span class="legend-sample ghost" aria-hidden="true"></span><span>Horizontal line: landing preview</span>';$('trayTitle').textContent='Pieces';$('controlsTitle').textContent='Controls';$('padKeysTitle').textContent='DotPad Keys';$('accessTitle').textContent='Audio & Accessibility';$('speechLabel').textContent='Speech guidance';$('speechModeLabel').textContent='Speech source';speechModeSelect.options[0].text='SuperDot TTS';speechModeSelect.options[1].text='Screen reader only';speechModeSelect.options[2].text='Both';$('sfxLabel').textContent='Directional earcons';$('musicLabel').textContent='Procedural music';$('assistLabel').textContent='Tactile-friendly lock delay';$('spawnHoldLabel').textContent='Always pause new piece';$('speedLabel').textContent='Drop speed';speedSelect.options[0].text='Tactile slow';speedSelect.options[1].text='Tactile turn-based';speedSelect.options[2].text='Relaxed';speedSelect.options[3].text='Standard';speedSelect.options[4].text='Challenge';$('musicStyleLabel').textContent='Music style';$('padMapTitle').textContent='DotPad Keys';$('padMapHelp').textContent='Pick a DotPad key for each action. Choosing a key already in use clears it from the other action. F1+F4 is reserved for opening settings.';$('padMapReset').textContent='Reset to defaults';renderPadMap();$('sfxVolumeLabel').textContent='Effects volume';sfxVolumeSelect.options[0].text='Quiet';sfxVolumeSelect.options[1].text='Normal';sfxVolumeSelect.options[2].text='Loud';sfxVolumeSelect.options[3].text='Maximum';$('musicVolumeLabel').textContent='Music volume';musicVolumeSelect.options[0].text='Quiet';musicVolumeSelect.options[1].text='Normal';musicVolumeSelect.options[2].text='Loud';musicVolumeSelect.options[3].text='Maximum';musicStyleSelect.options[0].text='Default (original ambient/chiptune)';musicStyleSelect.options[1].text='Korobeiniki (Russian folk, 1861)';musicStyleSelect.options[2].text='Kalinka (Larionov, 1860)';musicStyleSelect.options[3].text='Dance of the Sugar Plum Fairy (Tchaikovsky, 1892)';$('newLabel').textContent='Start';$('pauseLabel').textContent='Pause';$('statusLabel').textContent='Status';$('scanLabel').textContent='Surface scan';$('helpLabel').textContent='How to play';$('orientationLabel').textContent=rotateDir==='cw'?'Rotate: right':'Rotate: left';$('dpLabel').textContent='Connect DotPad';$('introDpLabel').textContent='Connect DotPad & start';$('pinLabel').textContent='Pin preview';$('playHelp').textContent='← → move · ↑ rotate · ↓ down (again on floor = lock) · Space×2 hard drop · C hold';syncSoundBtn();$('pinCap').innerHTML='Portrait 40×60<br>filled=blocks · line=landing · F1+F3=locate';$('introTitleText').textContent='DOT BLOCKS';$('introEyebrow').textContent='Tactile block game';$('introTagline').textContent='Build by touch, navigate by sound.';$('introDesc').textContent='Stand the DotPad upright and play without the screen.';$('diffPracticeName').textContent='Practice';$('diffPracticeDesc').textContent='Nothing falls on its own. Take your time and feel it out.';$('diffBasicName').textContent='Basic';$('diffBasicDesc').textContent='Falls very slowly. Best for playing by touch.';$('diffChallengeName').textContent='Challenge';$('diffChallengeDesc').textContent='Falls at familiar Tetris speed.';$('puzzleModeName').textContent='Bonus mode · Block Puzzle';$('introAccess').textContent='Enter to start without DotPad · 1/2/3 difficulty · P Block Puzzle';$('settingsTitle').textContent='Game Settings';$('pauseTitle').textContent='Paused';$('pauseDesc').textContent='The game and falling piece are paused. The current DotPad pin state is preserved.';$('resumeBtn').textContent='Resume';$('pauseHomeBtn').textContent='Back to Intro';$('resultTitle').textContent='Game Over';$('restartBtn').textContent='Play Again';$('resultHomeBtn').textContent='Choose Another Mode';setToggle(speechToggle,'speechState',settings.speech);setToggle(sfxToggle,'sfxState',settings.sfx);setToggle(musicToggle,'musicState',settings.music);setToggle(assistToggle,'assistState',settings.assist)}
 
   {const i=DIFFS.findIndex(d=>d.speed===settings.speed);if(i>=0)diffIndex=i}
-  applyLang();syncSoundBtn();setMode(params.get('mode')==='puzzle'?'puzzle':'drop',false);showIntro();loadSDK();if(params.get('monitor')==='1')dpMonOpen(true);
+  renderPadMap();applyLang();syncSoundBtn();setMode(params.get('mode')==='puzzle'?'puzzle':'drop',false);showIntro();loadSDK();if(params.get('monitor')==='1')dpMonOpen(true);
   if(params.get('preview')==='1'){pinwrap.classList.add('show');pinToggle.setAttribute('aria-pressed','true');drawPin()}
   tw('ready',{modes:['drop','puzzle'],lang:LANG});twSize();
 })();

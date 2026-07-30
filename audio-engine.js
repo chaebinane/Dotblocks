@@ -167,6 +167,14 @@
       }
     }
 
+    setSfxVolume(value) {
+      this.sfxVolume = Math.max(0, Math.min(1, Number(value) || 0));
+      if (this.ctx && this.sfxBus) {
+        this.sfxBus.gain.cancelScheduledValues(this.ctx.currentTime);
+        this.sfxBus.gain.setTargetAtTime(this.sfxEnabled ? this.sfxVolume : 0.0001, this.ctx.currentTime, 0.02);
+      }
+    }
+
     setMusicVolume(value) {
       this.musicVolume = Math.max(0, Math.min(0.7, Number(value) || 0));
       this.updateMusicGain();
