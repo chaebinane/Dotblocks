@@ -108,9 +108,11 @@
       this.musicBus = null;
       this.sfxBus = null;
       this.musicEnabled = true;
-      this.musicStyle = 'procedural';
+      this.musicStyle = 'retro';
       this.sfxEnabled = true;
-      this.musicVolume = 0.16;
+      /* Was 0.16, which combined with per-note gains around 0.06 put the music far
+         under the earcons (0.46). Raised, and now user-adjustable. */
+      this.musicVolume = 0.30;
       this.sfxVolume = 0.46;
       this.mode = 'drop';
       this.level = 1;
@@ -166,7 +168,7 @@
     }
 
     setMusicVolume(value) {
-      this.musicVolume = Math.max(0, Math.min(0.4, Number(value) || 0));
+      this.musicVolume = Math.max(0, Math.min(0.7, Number(value) || 0));
       this.updateMusicGain();
     }
 
@@ -243,7 +245,12 @@
       const now = this.ctx.currentTime;
       // Voice ducking wins if both are active at once: a spawn tick that lands
       // mid-announcement should not un-duck the voice early.
-      const duckMul = now < this.voiceDuckUntil ? 0.18 : (now < this.microDuckUntil ? 0.55 : 1);
+      /* Ducking used to drop the music to 18% for up to 5.2 s per announcement. Since a
+         spawn announcement fires for every piece, the music spent most of the round
+         ducked and simply read as "too quiet". Speech still has to stay intelligible, so
+         the duck is softened rather than removed, and speak() now asks for a shorter
+         window. */
+      const duckMul = now < this.voiceDuckUntil ? 0.45 : (now < this.microDuckUntil ? 0.72 : 1);
       const target = this.musicEnabled && !this.paused ? this.musicVolume * duckMul : 0.0001;
       this.musicBus.gain.cancelScheduledValues(now);
       this.musicBus.gain.setTargetAtTime(Math.max(0.0001, target), now, 0.08);
