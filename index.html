@@ -783,7 +783,12 @@
     const shouldHold=!first&&settings.speed!=='turn'&&(settings.spawnHold||(settings.speed==='tactile'&&isFirstOfType));
     spawnHoldUntil=shouldHold?performance.now()+1400:0;
     if(!first){
-      const gy=ghostY(),cols=pieceColumnRange(active);
+      /* Spawn fires for every piece, so this line is the most repeated speech in the
+         game. It used to read the column range and the predicted landing row as well,
+         which is a lot of numbers to sit through when the earcon already says which piece
+         arrived and the pins already show where it is. Only the next piece is left — the
+         one thing you cannot get from touch. Column, row, landing distance and score stay
+         available on demand through the status keys. */
       // Voice-to-earcon handoff: name the shape for its first few spawns so the
       // earcon has something to attach to, then let the earcon alone carry the
       // identity so the routine announcement gets shorter as it becomes familiar.
@@ -791,7 +796,7 @@
       const exposures=pieceExposureCount(type);bumpPieceExposure(type);
       const taught=exposures<PIECE_LEARN_THRESHOLD;
       const namePart=taught?PIECE_NAMES[type]+' 블록. ':'',namePartEn=taught?PIECE_NAMES[type]+' piece. ':'';
-      announce(S(namePart+cols+'. 예상 착지 '+(Math.min(DROP_H,gy+b.h))+'행. 다음 '+PIECE_NAMES[nextType]+'.',namePartEn+cols+'. Expected landing row '+Math.min(DROP_H,gy+b.h)+'. Next: '+PIECE_NAMES[nextType]+'.'),{phase:dangerLevel()?'danger':'play',tts:true})
+      announce(S(namePart+'다음 '+PIECE_NAMES[nextType]+'.',namePartEn+'Next: '+PIECE_NAMES[nextType]+'.'),{phase:dangerLevel()?'danger':'play',tts:true})
     }
     updateBoardAria();return true;
   }
