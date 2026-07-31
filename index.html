@@ -715,10 +715,6 @@
   // of the routine per-spawn announcement (the status-read keys still say it on
   // request). Persisted across sessions so the fade-out is a one-time thing, not
   // something that resets every reload.
-  const PIECE_LEARN_THRESHOLD=3;
-  function pieceExposureMap(){try{return JSON.parse(storageGet('dotblocks-piece-exposure')||'{}')}catch(e){return{}}}
-  function pieceExposureCount(type){return Number(pieceExposureMap()[type])||0}
-  function bumpPieceExposure(type){const m=pieceExposureMap();m[type]=(m[type]||0)+1;storageSet('dotblocks-piece-exposure',JSON.stringify(m))}
   const PAD_SETTING_KEYS=['speech','speechMode','sfx','sfxVolume','music','musicVolume','assist','spawnHold','speed','musicStyle','resync'];
 
   // Original palette, deliberately distinct from the canonical Tetris color scheme.
@@ -814,14 +810,14 @@
          arrived and the pins already show where it is. Only the next piece is left — the
          one thing you cannot get from touch. Column, row, landing distance and score stay
          available on demand through the status keys. */
-      // Voice-to-earcon handoff: name the shape for its first few spawns so the
-      // earcon has something to attach to, then let the earcon alone carry the
-      // identity so the routine announcement gets shorter as it becomes familiar.
-      // The status-read keys still say the name on request no matter what.
-      const exposures=pieceExposureCount(type);bumpPieceExposure(type);
-      const taught=exposures<PIECE_LEARN_THRESHOLD;
-      const namePart=taught?PIECE_NAMES[type]+' 블록. ':'',namePartEn=taught?PIECE_NAMES[type]+' piece. ':'';
-      announce(S(namePart+'다음 '+PIECE_NAMES[nextType]+'.',namePartEn+'Next: '+PIECE_NAMES[nextType]+'.'),{phase:dangerLevel()?'danger':'play',tts:true})
+      /* Current piece first, then the next one. The old behaviour named the current
+         piece only for its first three appearances and then dropped to the next piece
+         alone, on the theory that the earcon would take over the identity. With the
+         standard names that trade is no longer worth it: "I미노" is short enough to say
+         every time, and always hearing "이번 … 다음 …" in the same order is easier to
+         follow than a line whose shape changes once you have seen a piece enough times.
+         The per-shape exposure counter that drove the old behaviour is gone with it. */
+      announce(S('이번 '+PIECE_NAMES[type]+'. 다음 '+PIECE_NAMES[nextType]+'.','Now '+PIECE_NAMES[type]+'. Next '+PIECE_NAMES[nextType]+'.'),{phase:dangerLevel()?'danger':'play',tts:true})
     }
     updateBoardAria();return true;
   }
