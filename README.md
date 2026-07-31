@@ -183,7 +183,7 @@
 ## 🔗 URL 옵션
 
 - `?mode=drop` 또는 `?mode=puzzle`
-- `?lang=ko` 또는 `?lang=en`
+- `?lang=ko` 또는 `?lang=en` (없으면 마지막으로 선택한 언어를 씁니다. 설정 서랍 맨 위 또는 닷패드 F4 메뉴에서 전환)
 - `?embed=1`
 - `?monitor=1` (닷패드 모니터 열기, `M` 키로도 토글)
 - `?preview=1`
