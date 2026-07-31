@@ -303,8 +303,27 @@
   /* Native <option> inherits the OS palette, so on the dark panel the list rendered
      near-black on near-black and only the highlighted row was readable. Both the closed
      control and the open list need explicit colours. */
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  .volwrap{display:flex;align-items:center;gap:8px}
+  .volwrap b{min-width:38px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .dock-vol{display:flex;align-items:center;gap:7px;padding:0 10px;height:40px;border-radius:10px;border:1px solid rgb(255 255 255 / 14%);background:rgb(255 255 255 / 5%);color:var(--ink-secondary)}
+  .dock-vol .ti{width:17px;height:17px;flex:none}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:22px;background:transparent;cursor:pointer;width:104px}
+  input[type=range]::-webkit-slider-runnable-track{height:5px;border-radius:999px;background:rgb(255 255 255 / 18%)}
+  input[type=range]::-moz-range-track{height:5px;border-radius:999px;background:rgb(255 255 255 / 18%)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin-top:-5.5px;border-radius:50%;background:var(--accent);border:2px solid #0a0c0f}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);border:2px solid #0a0c0f}
+  body.kbd input[type=range]:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+  .padtabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:10px 0 2px;padding:3px;border-radius:10px;background:rgb(255 255 255 / 5%);border:1px solid rgb(255 255 255 / 10%)}
+  .padtab{padding:8px 6px;min-height:36px;border:0;border-radius:7px;background:transparent;color:var(--ink-secondary);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+  .padtab:hover{color:var(--ink)}
+  .padtab[aria-selected="true"]{background:var(--accent);color:#0a0c0f}
+  body.kbd .padtab:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
   .padmap{display:grid;gap:6px;margin:8px 0 4px}
-  .padmap h3{margin:8px 0 2px;font-size:11.5px;font-weight:700;color:var(--ink-secondary);letter-spacing:.02em}
+  .padmap[hidden]{display:none}
+  /* 서랍 안의 다른 버튼과 같은 높이·모서리·글꼴을 쓰도록. 진단 패널 전용 스타일을
+     빌려 쓰고 있어서 이 버튼만 작고 다른 글꼴로 보였다. */
+  .btn.wide{width:100%;margin-top:10px}
   .padmap-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;font-size:12px;font-weight:600;color:var(--ink-secondary)}
   .padmap-row select{
     appearance:none;-webkit-appearance:none;background-color:#151a22;color:var(--ink);
@@ -550,6 +569,7 @@
     <button class="btn" id="statusBtn" type="button"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 12h16M4 6h10M4 18h7"/></svg><span class="mobile-hide" id="statusLabel">현재 상태</span></button>
     <button class="btn scan" id="scanBtn" type="button" aria-pressed="false"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3M7 12h10"/></svg><span class="mobile-hide" id="scanLabel">촉각 스캔</span></button>
     <button class="btn dp" id="dpBtn" type="button" data-on="0"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 8l10 8-5 4V4l5 4L7 16"/></svg><span id="dpLabel">닷패드 연결</span></button>
+    <label class="dock-vol" id="dockVolWrap"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span class="sr-only" id="dockVolLabel">배경음악 크기</span><input type="range" id="musicVolumeDock" min="0" max="100" step="5" value="55" aria-labelledby="dockVolLabel"></label>
     <button class="btn icon" id="soundBtn" type="button" aria-pressed="true" aria-label="음성 켜짐, 누르면 끔"></button>
   </div>
 
@@ -573,15 +593,19 @@
       <button class="toggle" id="assistToggle" type="button" aria-pressed="true"><span id="assistLabel">촉각 친화 잠금 유예</span><span id="assistState">켜짐</span></button>
       <button class="toggle" id="spawnHoldToggle" type="button" aria-pressed="false"><span id="spawnHoldLabel">새 블록 항상 정지</span><span id="spawnHoldState">꺼짐</span></button>
       <div class="speed-row"><label for="sfxVolumeSelect" id="sfxVolumeLabel">효과음 크기</label><select id="sfxVolumeSelect"><option value="quiet">작게</option><option value="normal">보통</option><option value="loud">크게</option><option value="max">아주 크게</option></select></div>
-      <div class="speed-row"><label for="musicVolumeSelect" id="musicVolumeLabel">배경음악 크기</label><select id="musicVolumeSelect"><option value="quiet">작게</option><option value="normal">보통</option><option value="loud">크게</option><option value="max">아주 크게</option></select></div>
+      <div class="speed-row"><label for="musicVolumeSlider" id="musicVolumeLabel">배경음악 크기</label><span class="volwrap"><input type="range" id="musicVolumeSlider" min="0" max="100" step="5" value="55"><b id="musicVolumeValue">55%</b></span></div>
       <div class="speed-row"><label for="musicStyleSelect" id="musicStyleLabel">배경음악 스타일</label><select id="musicStyleSelect"><option value="procedural">기본 (오리지널 앰비언트/칩튠)</option><option value="retro">코로베이니키 (러시아 민요, 1861)</option><option value="kalinka">칼린카 (라리오노프, 1860)</option><option value="sugarplum">설탕요정의 춤 (차이콥스키, 1892)</option></select></div>
       <div class="speed-row"><label for="speedSelect" id="speedLabel">낙하 속도</label><select id="speedSelect"><option value="tactile">촉각 저속</option><option value="turn">촉각 턴제</option><option value="relaxed">여유</option><option value="standard">표준</option><option value="challenge">도전</option></select></div>
     </div></section>
     <section class="sidecard"><h2 id="padMapTitle">닷패드 키 설정</h2>
       <div class="helptext" id="padMapHelp">동작마다 원하는 닷패드 키를 고르세요. 이미 쓰는 키를 고르면 먼저 쓰던 동작의 키가 해제됩니다. F1+F4는 설정 열기로 고정되어 바꿀 수 없습니다.</div>
-      <div class="padmap" id="padMapDrop"></div>
-      <div class="padmap" id="padMapPuzzle"></div>
-      <div class="dpmon-actions"><button type="button" id="padMapReset">기본값으로 되돌리기</button></div>
+      <div class="padtabs" role="tablist" aria-label="모드 선택">
+        <button type="button" class="padtab" id="padTabDrop" role="tab" aria-selected="true" aria-controls="padMapDrop">낙하 모드</button>
+        <button type="button" class="padtab" id="padTabPuzzle" role="tab" aria-selected="false" aria-controls="padMapPuzzle" tabindex="-1">블록 퍼즐</button>
+      </div>
+      <div class="padmap" id="padMapDrop" role="tabpanel" aria-labelledby="padTabDrop"></div>
+      <div class="padmap" id="padMapPuzzle" role="tabpanel" aria-labelledby="padTabPuzzle" hidden></div>
+      <button class="btn wide" type="button" id="padMapReset">기본값으로 되돌리기</button>
     </section>
     <section class="sidecard"><h2>진단</h2><div class="toggle-list"><button class="toggle" id="dpMonBtn" type="button" aria-pressed="false"><span>닷패드 모니터</span><b id="dpMonBtnState">M 키</b></button></div><div class="helptext">실제로 닷패드에 전송된 프레임과 지금 게임판을 나란히 비교합니다. 어긋나면 차이 나는 핀을 붉게 표시합니다.</div></section>
     <section class="sidecard"><h2 id="verticalTitle">세로 닷패드</h2><div class="orientation" id="orientationText"><strong>40×60 논리 핀</strong>을 실제 60×40 출력으로 자동 회전합니다.</div><div class="legend" id="legend"><span class="legend-sample outline" aria-hidden="true"></span><span>빈틈 없이 꽉 찬 면: 쌓인 블록과 움직이는 블록</span><span class="legend-sample solid" aria-hidden="true"></span><span>F1+F3: 지금 블록만 강조해서 위치 확인</span><span class="legend-sample ghost" aria-hidden="true"></span><span>가로로 이어진 선: 예상 착지</span></div></section>
@@ -650,7 +674,7 @@
   let diffIndex=1;
   const newBtn=$('newBtn'),pauseBtn=$('pauseBtn'),helpBtn=$('helpBtn'),statusBtn=$('statusBtn'),scanBtn=$('scanBtn');
   const orientationBtn=$('orientationBtn'),dpBtn=$('dpBtn'),pinToggle=$('pinToggle');
-  const speechToggle=$('speechToggle'),sfxToggle=$('sfxToggle'),musicToggle=$('musicToggle'),assistToggle=$('assistToggle'),spawnHoldToggle=$('spawnHoldToggle'),speedSelect=$('speedSelect'),musicStyleSelect=$('musicStyleSelect'),musicVolumeSelect=$('musicVolumeSelect'),sfxVolumeSelect=$('sfxVolumeSelect'),speechModeSelect=$('speechModeSelect');
+  const speechToggle=$('speechToggle'),sfxToggle=$('sfxToggle'),musicToggle=$('musicToggle'),assistToggle=$('assistToggle'),spawnHoldToggle=$('spawnHoldToggle'),speedSelect=$('speedSelect'),musicStyleSelect=$('musicStyleSelect'),musicVolumeSlider=$('musicVolumeSlider'),musicVolumeDock=$('musicVolumeDock'),sfxVolumeSelect=$('sfxVolumeSelect'),speechModeSelect=$('speechModeSelect');
   const pinwrap=$('pinwrap'),pin=$('pin'),pctx=pin.getContext('2d');
   const introScreen=$('introScreen'),stage=$('stage'),startSelectedBtn=$('startSelectedBtn'),introConnectBtn=$('introConnectBtn');
   const homeBtn=$('homeBtn'),menuBtn=$('menuBtn'),drawerBackdrop=$('drawerBackdrop'),settingsDrawer=$('settingsDrawer'),drawerClose=$('drawerClose');
@@ -677,20 +701,24 @@
      endpoint exists only on the Dot Games host, and we are only there when
      embedded, so drive it from frame detection instead. */
   if(window.SUPERDOT_TTS&&SUPERDOT_TTS.config){const embedded=window.parent!==window;SUPERDOT_TTS.config({serverFirst:embedded,retry:embedded})}
-  let settings={speech:true,speechMode:'superdot',sfx:true,music:true,assist:true,spawnHold:false,speed:'tactile',musicStyle:'retro',musicVolume:'normal',sfxVolume:'normal'};
+  let settings={speech:true,speechMode:'superdot',sfx:true,music:true,assist:true,spawnHold:false,speed:'tactile',musicStyle:'retro',musicVolume:0.55,sfxVolume:'normal'};
   try{settings={...settings,...JSON.parse(localStorage.getItem('dotblocks-settings')||'{}')}}catch(e){}
   settings.speed=['tactile','turn','relaxed','standard','challenge'].includes(settings.speed)?settings.speed:'tactile';
   const MUSIC_STYLES=['procedural','retro','kalinka','sugarplum'];
-  const MUSIC_VOLUMES={quiet:0.18,normal:0.30,loud:0.45,max:0.60};
-  const MUSIC_VOLUME_KEYS=Object.keys(MUSIC_VOLUMES);
-  settings.musicVolume=MUSIC_VOLUME_KEYS.includes(settings.musicVolume)?settings.musicVolume:'normal';
+  /* Music volume is a plain 0..1 number now, not one of four presets. Four steps was not
+     enough resolution to sit the music where you want it against the earcons, and the
+     control now also lives on the play screen rather than only in the drawer, so it can be
+     nudged while listening instead of from memory. Old preset names are migrated. */
+  const LEGACY_MUSIC_VOLUMES={quiet:0.28,normal:0.55,loud:0.75,max:1};
+  if(typeof settings.musicVolume==='string')settings.musicVolume=LEGACY_MUSIC_VOLUMES[settings.musicVolume]??0.55;
+  settings.musicVolume=Math.max(0,Math.min(1,Number(settings.musicVolume)||0.55));
   const SFX_VOLUMES={quiet:0.26,normal:0.46,loud:0.66,max:0.86};
   const SFX_VOLUME_KEYS=Object.keys(SFX_VOLUMES);
   settings.sfxVolume=SFX_VOLUME_KEYS.includes(settings.sfxVolume)?settings.sfxVolume:'normal';
   settings.musicStyle=MUSIC_STYLES.includes(settings.musicStyle)?settings.musicStyle:'retro';
   settings.speechMode=['superdot','screenreader','both'].includes(settings.speechMode)?settings.speechMode:'superdot';
   settings.spawnHold=settings.spawnHold===true;
-  audio.setMusicEnabled(settings.music);audio.setSfxEnabled(settings.sfx);audio.setMusicStyle(settings.musicStyle);audio.setMusicVolume(MUSIC_VOLUMES[settings.musicVolume]);audio.setSfxVolume(SFX_VOLUMES[settings.sfxVolume]);
+  audio.setMusicEnabled(settings.music);audio.setSfxEnabled(settings.sfx);audio.setMusicStyle(settings.musicStyle);audio.setMusicVolume(settings.musicVolume);audio.setSfxVolume(SFX_VOLUMES[settings.sfxVolume]);
 
   let mode=null,running=false,paused=false,over=true,scanMode=false,scanResume=false,isAnimating=false;
   let rotateDir=params.get('rotate')==='ccw'?'ccw':'cw';
@@ -1379,16 +1407,17 @@
   function confirmedHardDrop(){return confirmActionTwice('hardDrop',S('즉시 낙하 확인. 1.8초 안에 같은 키를 한 번 더 누르세요.','Hard drop confirmation. Press the same key again within 1.8 seconds.'),hardDrop)}
   function confirmedRestart(){return confirmActionTwice('restart',S('다시 시작 확인. 1.8초 안에 F1을 한 번 더 누르세요.','Restart confirmation. Press F1 again within 1.8 seconds.'),newGame)}
   function padSettingName(key){return {speech:S('음성 안내','speech guidance'),speechMode:S('음성 안내 방식','speech source'),sfx:S('방향 효과음','directional effects'),music:S('배경음악','music'),assist:S('잠금 유예','lock delay'),spawnHold:S('새 블록 항상 정지','always pause new piece'),speed:S('낙하 방식','drop style'),musicStyle:S('음악 스타일','music style'),musicVolume:S('배경음악 크기','music volume'),sfxVolume:S('효과음 크기','effects volume'),resync:S('핀 다시 그리기','redraw pins')}[key]}
-  function padSettingValue(key){if(key==='resync')return S('F3을 누르면 실행','press F3 to run');if(key==='musicVolume'||key==='sfxVolume')return{quiet:S('작게','quiet'),normal:S('보통','normal'),loud:S('크게','loud'),max:S('아주 크게','maximum')}[settings[key]];if(key==='speechMode')return {superdot:S('슈퍼닷 TTS','SuperDot TTS'),screenreader:S('스크린리더만','screen reader only'),both:S('둘 다','both')}[settings.speechMode];if(key==='speed')return {tactile:S('촉각 저속','tactile slow'),turn:S('촉각 턴제','tactile turn based'),relaxed:S('여유','relaxed'),standard:S('표준','standard'),challenge:S('도전','challenge')}[settings.speed];if(key==='musicStyle')return{procedural:S('오리지널 앰비언트','original ambient'),retro:S('코로베이니키','Korobeiniki'),kalinka:S('칼린카','Kalinka'),sugarplum:S('설탕요정의 춤','Sugar Plum Fairy')}[settings.musicStyle];return settings[key]?S('켜짐','on'):S('꺼짐','off')}
+  function padSettingValue(key){if(key==='resync')return S('F3을 누르면 실행','press F3 to run');if(key==='musicVolume')return Math.round(settings.musicVolume*100)+'%';
+    if(key==='sfxVolume')return{quiet:S('작게','quiet'),normal:S('보통','normal'),loud:S('크게','loud'),max:S('아주 크게','maximum')}[settings.sfxVolume];if(key==='speechMode')return {superdot:S('슈퍼닷 TTS','SuperDot TTS'),screenreader:S('스크린리더만','screen reader only'),both:S('둘 다','both')}[settings.speechMode];if(key==='speed')return {tactile:S('촉각 저속','tactile slow'),turn:S('촉각 턴제','tactile turn based'),relaxed:S('여유','relaxed'),standard:S('표준','standard'),challenge:S('도전','challenge')}[settings.speed];if(key==='musicStyle')return{procedural:S('오리지널 앰비언트','original ambient'),retro:S('코로베이니키','Korobeiniki'),kalinka:S('칼린카','Kalinka'),sugarplum:S('설탕요정의 춤','Sugar Plum Fairy')}[settings.musicStyle];return settings[key]?S('켜짐','on'):S('꺼짐','off')}
   function announcePadSetting(){const key=PAD_SETTING_KEYS[padSettingIndex];speak((padSettingIndex+1)+'/'+PAD_SETTING_KEYS.length+'. '+padSettingName(key)+', '+padSettingValue(key)+'. '+S('F1 이전, F2 다음, F3 변경, F4 닫기.','F1 previous, F2 next, F3 change, F4 close.'))}
   function syncSettingUI(){
     setToggle(speechToggle,'speechState',settings.speech);setToggle(sfxToggle,'sfxState',settings.sfx);setToggle(musicToggle,'musicState',settings.music);setToggle(assistToggle,'assistState',settings.assist);setToggle(spawnHoldToggle,'spawnHoldState',settings.spawnHold);
-    speechModeSelect.value=settings.speechMode;speedSelect.value=settings.speed;musicStyleSelect.value=settings.musicStyle;musicVolumeSelect.value=settings.musicVolume;sfxVolumeSelect.value=settings.sfxVolume;syncSpeechModeAria();syncSoundBtn();saveSettings()
+    speechModeSelect.value=settings.speechMode;speedSelect.value=settings.speed;musicStyleSelect.value=settings.musicStyle;sfxVolumeSelect.value=settings.sfxVolume;syncSpeechModeAria();syncSoundBtn();saveSettings()
   }
   function enterPadSettings(){padMenu='settings';padSettingIndex=0;clearConfirm();announcePadSetting()}
   function changePadSetting(){const key=PAD_SETTING_KEYS[padSettingIndex];
     if(key==='resync'){speak(S('핀을 다시 그립니다.','Redrawing the pins.'));padForceResync('설정 메뉴');return}
-    if(key==='speechMode'){const a=['superdot','screenreader','both'];settings.speechMode=a[(a.indexOf(settings.speechMode)+1)%a.length]}else if(key==='speed'){const a=['tactile','turn','relaxed','standard','challenge'];settings.speed=a[(a.indexOf(settings.speed)+1)%a.length]}else if(key==='musicStyle'){settings.musicStyle=MUSIC_STYLES[(MUSIC_STYLES.indexOf(settings.musicStyle)+1)%MUSIC_STYLES.length];audio.setMusicStyle(settings.musicStyle)}else if(key==='musicVolume'){settings.musicVolume=MUSIC_VOLUME_KEYS[(MUSIC_VOLUME_KEYS.indexOf(settings.musicVolume)+1)%MUSIC_VOLUME_KEYS.length];audio.setMusicVolume(MUSIC_VOLUMES[settings.musicVolume])}else if(key==='sfxVolume'){settings.sfxVolume=SFX_VOLUME_KEYS[(SFX_VOLUME_KEYS.indexOf(settings.sfxVolume)+1)%SFX_VOLUME_KEYS.length];audio.setSfxVolume(SFX_VOLUMES[settings.sfxVolume]);audio.earcon('move')}else{settings[key]=!settings[key];if(key==='sfx')audio.setSfxEnabled(settings.sfx);if(key==='music')audio.setMusicEnabled(settings.music)}syncSettingUI();announcePadSetting()}
+    if(key==='speechMode'){const a=['superdot','screenreader','both'];settings.speechMode=a[(a.indexOf(settings.speechMode)+1)%a.length]}else if(key==='speed'){const a=['tactile','turn','relaxed','standard','challenge'];settings.speed=a[(a.indexOf(settings.speed)+1)%a.length]}else if(key==='musicStyle'){settings.musicStyle=MUSIC_STYLES[(MUSIC_STYLES.indexOf(settings.musicStyle)+1)%MUSIC_STYLES.length];audio.setMusicStyle(settings.musicStyle)}else if(key==='musicVolume'){let v=Math.round(settings.musicVolume*10)/10+0.1;if(v>1.001)v=0;applyMusicVolume(v,{announce:false})}else if(key==='sfxVolume'){settings.sfxVolume=SFX_VOLUME_KEYS[(SFX_VOLUME_KEYS.indexOf(settings.sfxVolume)+1)%SFX_VOLUME_KEYS.length];audio.setSfxVolume(SFX_VOLUMES[settings.sfxVolume]);audio.earcon('move')}else{settings[key]=!settings[key];if(key==='sfx')audio.setSfxEnabled(settings.sfx);if(key==='music')audio.setMusicEnabled(settings.music)}syncSettingUI();announcePadSetting()}
   function handlePadSettingsKey(keyCode){if(keyCode===KeyCodes.KeyFunction1){padSettingIndex=(padSettingIndex+PAD_SETTING_KEYS.length-1)%PAD_SETTING_KEYS.length;announcePadSetting()}else if(keyCode===KeyCodes.KeyFunction2){padSettingIndex=(padSettingIndex+1)%PAD_SETTING_KEYS.length;announcePadSetting()}else if(keyCode===KeyCodes.KeyFunction3){changePadSetting()}else if(keyCode===KeyCodes.KeyFunction4){padMenu=introScreen.hidden?null:'intro';speak(S('설정을 닫았습니다.','Settings closed.'))}}
 
 
@@ -1451,7 +1480,7 @@
   function renderPadMap(){
     for(const m of ['drop','puzzle']){
       const host=$(m==='drop'?'padMapDrop':'padMapPuzzle');
-      host.innerHTML='<h3>'+(m==='drop'?S('낙하 모드','Drop mode'):S('블록 퍼즐','Block Puzzle'))+'</h3>';
+      host.innerHTML='';
       for(const [action,def] of Object.entries(PAD_ACTIONS)){
         if(!def.modes.includes(m))continue;
         const row=document.createElement('div');row.className='padmap-row';
@@ -1469,7 +1498,8 @@
           if(key)for(const [other,k] of Object.entries(settings.padMap[m]))
             if(other!==action&&k===key)settings.padMap[m][other]='';   // 한 키에 두 동작이 붙지 않게
           settings.padMap[m][action]=key;
-          rebuildPadReverse();saveSettings();renderPadMap();
+          const wasPuzzle=$('padTabPuzzle').getAttribute('aria-selected')==='true';
+          rebuildPadReverse();saveSettings();renderPadMap();selectPadTab(wasPuzzle?'puzzle':'drop');
           speak(key?S(def.label+'을(를) '+PAD_KEY_LABELS[key]+'로 바꿨어요.',def.label+' mapped to '+PAD_KEY_LABELS[key]+'.')
                    :S(def.label+' 키를 해제했어요.',def.label+' unmapped.'));
         });
@@ -1477,8 +1507,27 @@
       }
     }
   }
+  /* Two modes' worth of bindings is 26 rows; showing both at once buried everything
+     below them. Tabs keep the drawer scannable. */
+  function selectPadTab(which,focus){
+    for(const [id,panel,mode] of [['padTabDrop','padMapDrop','drop'],['padTabPuzzle','padMapPuzzle','puzzle']]){
+      const on=mode===which;
+      const tab=$(id);
+      tab.setAttribute('aria-selected',String(on));
+      tab.tabIndex=on?0:-1;
+      $(panel).hidden=!on;
+      if(on&&focus)tab.focus();
+    }
+  }
+  $('padTabDrop').addEventListener('click',()=>selectPadTab('drop'));
+  $('padTabPuzzle').addEventListener('click',()=>selectPadTab('puzzle'));
+  for(const [id,other] of [['padTabDrop','puzzle'],['padTabPuzzle','drop']])
+    $(id).addEventListener('keydown',ev=>{
+      if(ev.key==='ArrowRight'||ev.key==='ArrowLeft'){selectPadTab(other,true);ev.preventDefault()}
+    });
   $('padMapReset').addEventListener('click',()=>{
-    settings.padMap=clonePadMap(DEFAULT_PAD_MAP);rebuildPadReverse();saveSettings();renderPadMap();
+    const wasPuzzle=$('padTabPuzzle').getAttribute('aria-selected')==='true';
+    settings.padMap=clonePadMap(DEFAULT_PAD_MAP);rebuildPadReverse();saveSettings();renderPadMap();selectPadTab(wasPuzzle?'puzzle':'drop');
     speak(S('닷패드 키를 기본값으로 되돌렸어요.','DotPad keys reset to defaults.'));
   });
   $('dpMonResync').addEventListener('click',()=>padForceResync('모니터'));
@@ -1643,7 +1692,22 @@
   musicStyleSelect.value=settings.musicStyle;musicStyleSelect.addEventListener('change',()=>{settings.musicStyle=musicStyleSelect.value;audio.setMusicStyle(settings.musicStyle);saveSettings();speak(S(MUSIC_STYLE_NAMES[settings.musicStyle]+' 배경음악으로 바꿨어요.','Switched to '+MUSIC_STYLE_NAMES[settings.musicStyle]+'.'))});
   const VOL_NAMES={quiet:S('작게','quiet'),normal:S('보통','normal'),loud:S('크게','loud'),max:S('아주 크게','maximum')};
   sfxVolumeSelect.value=settings.sfxVolume;sfxVolumeSelect.addEventListener('change',()=>{settings.sfxVolume=sfxVolumeSelect.value;audio.setSfxVolume(SFX_VOLUMES[settings.sfxVolume]);saveSettings();audio.earcon('move');speak(S('효과음 크기를 '+VOL_NAMES[settings.sfxVolume]+'로 바꿨어요.','Effects volume set to '+VOL_NAMES[settings.sfxVolume]+'.'))});
-  musicVolumeSelect.value=settings.musicVolume;musicVolumeSelect.addEventListener('change',()=>{settings.musicVolume=musicVolumeSelect.value;audio.setMusicVolume(MUSIC_VOLUMES[settings.musicVolume]);saveSettings();speak(S('배경음악 크기를 '+{quiet:'작게',normal:'보통',loud:'크게',max:'아주 크게'}[settings.musicVolume]+'로 바꿨어요.','Music volume set to '+settings.musicVolume+'.'))});
+  function applyMusicVolume(v,{announce=true,from=null}={}){
+    settings.musicVolume=Math.max(0,Math.min(1,v));
+    audio.setMusicVolume(settings.musicVolume);
+    const pct=Math.round(settings.musicVolume*100);
+    if(musicVolumeSlider!==from)musicVolumeSlider.value=String(pct);
+    if(musicVolumeDock!==from)musicVolumeDock.value=String(pct);
+    $('musicVolumeValue').textContent=pct+'%';
+    const vt=S('배경음악 '+pct+'퍼센트','Music '+pct+' percent');
+    musicVolumeDock.setAttribute('aria-valuetext',vt);musicVolumeSlider.setAttribute('aria-valuetext',vt);
+    saveSettings();
+    if(announce)speak(S('배경음악 '+pct+'퍼센트.','Music '+pct+' percent.'));
+  }
+  musicVolumeSlider.addEventListener('input',()=>applyMusicVolume(Number(musicVolumeSlider.value)/100,{announce:false,from:musicVolumeSlider}));
+  musicVolumeSlider.addEventListener('change',()=>applyMusicVolume(Number(musicVolumeSlider.value)/100,{from:musicVolumeSlider}));
+  musicVolumeDock.addEventListener('input',()=>applyMusicVolume(Number(musicVolumeDock.value)/100,{announce:false,from:musicVolumeDock}));
+  musicVolumeDock.addEventListener('change',()=>applyMusicVolume(Number(musicVolumeDock.value)/100,{from:musicVolumeDock}));
   speedSelect.value=settings.speed;speedSelect.addEventListener('change',()=>{settings.speed=speedSelect.value;saveSettings();speak(S('낙하 방식을 '+speedSelect.options[speedSelect.selectedIndex].text+'로 설정했습니다.','Drop style changed.'))});
   setToggle(speechToggle,'speechState',settings.speech);setToggle(sfxToggle,'sfxState',settings.sfx);setToggle(musicToggle,'musicState',settings.music);setToggle(assistToggle,'assistState',settings.assist);syncSpeechModeAria();
   $('dpMonBtn').addEventListener('click',()=>dpMonOpen(dpMon.hidden));
@@ -1655,10 +1719,10 @@
   window.addEventListener('resize',()=>{clearTimeout(window.__dbRz);window.__dbRz=setTimeout(()=>{renderAll();twSize()},100)});document.addEventListener('visibilitychange',()=>{if(!stage.hidden&&document.hidden&&mode==='drop'&&running&&!over&&!paused){paused=true;audio.pause();$('pauseLabel').textContent=S('계속','Resume');showPauseState();announce(S('앱이 백그라운드로 이동해 자동 일시정지했습니다.','Automatically paused while the app is in the background.'),{phase:'ready',tts:false})}});document.addEventListener('pointerdown',()=>document.body.classList.remove('kbd'));document.body.addEventListener('pointerdown',function once(){ensureAudio();try{speechSynthesis.resume()}catch(e){}document.body.removeEventListener('pointerdown',once)},{once:true});
   window.getDotpadFrame=()=>encodeHardware(portraitToHardware(buildPortraitFrame()));window.getPortraitFrame=()=>buildPortraitFrame();window.getAccessibilityState=()=>({mode,scanMode,settings:{...settings},danger:mode==='drop'?dangerLevel():0,frameLength:window.getDotpadFrame().length,brailleLine:brailleLine()});
 
-  function applyLang(){if(LANG!=='en')return;document.documentElement.lang='en';document.title='DOT BLOCKS';$('blindBadge').textContent='BLIND-FIRST';$('scoreTitle').textContent='Game Stats';$('scoreLabel').textContent='Score';$('secondaryLabel').textContent='Lines';$('levelLabel').textContent='Level';$('bestLabel').textContent='Best';$('nextTitle').textContent='Next Piece';$('holdTitle').textContent='Held Piece';$('holdHint').textContent='C / F1+F2';$('verticalTitle').textContent='Portrait DotPad';$('orientationText').innerHTML='<strong>40×60 logical pins</strong> rotate automatically into the physical 60×40 output. Stand the DotPad with controls at the bottom.';$('legend').innerHTML='<span class="legend-sample outline" aria-hidden="true"></span><span>Completely filled surface: settled and moving blocks</span><span class="legend-sample solid" aria-hidden="true"></span><span>F1+F3: highlight just your piece</span><span class="legend-sample ghost" aria-hidden="true"></span><span>Horizontal line: landing preview</span>';$('trayTitle').textContent='Pieces';$('controlsTitle').textContent='Controls';$('padKeysTitle').textContent='DotPad Keys';$('accessTitle').textContent='Audio & Accessibility';$('speechLabel').textContent='Speech guidance';$('speechModeLabel').textContent='Speech source';speechModeSelect.options[0].text='SuperDot TTS';speechModeSelect.options[1].text='Screen reader only';speechModeSelect.options[2].text='Both';$('sfxLabel').textContent='Directional earcons';$('musicLabel').textContent='Procedural music';$('assistLabel').textContent='Tactile-friendly lock delay';$('spawnHoldLabel').textContent='Always pause new piece';$('speedLabel').textContent='Drop speed';speedSelect.options[0].text='Tactile slow';speedSelect.options[1].text='Tactile turn-based';speedSelect.options[2].text='Relaxed';speedSelect.options[3].text='Standard';speedSelect.options[4].text='Challenge';$('musicStyleLabel').textContent='Music style';$('padMapTitle').textContent='DotPad Keys';$('padMapHelp').textContent='Pick a DotPad key for each action. Choosing a key already in use clears it from the other action. F1+F4 is reserved for opening settings.';$('padMapReset').textContent='Reset to defaults';renderPadMap();$('sfxVolumeLabel').textContent='Effects volume';sfxVolumeSelect.options[0].text='Quiet';sfxVolumeSelect.options[1].text='Normal';sfxVolumeSelect.options[2].text='Loud';sfxVolumeSelect.options[3].text='Maximum';$('musicVolumeLabel').textContent='Music volume';musicVolumeSelect.options[0].text='Quiet';musicVolumeSelect.options[1].text='Normal';musicVolumeSelect.options[2].text='Loud';musicVolumeSelect.options[3].text='Maximum';musicStyleSelect.options[0].text='Default (original ambient/chiptune)';musicStyleSelect.options[1].text='Korobeiniki (Russian folk, 1861)';musicStyleSelect.options[2].text='Kalinka (Larionov, 1860)';musicStyleSelect.options[3].text='Dance of the Sugar Plum Fairy (Tchaikovsky, 1892)';$('newLabel').textContent='Start';$('pauseLabel').textContent='Pause';$('statusLabel').textContent='Status';$('scanLabel').textContent='Surface scan';$('helpLabel').textContent='How to play';$('orientationLabel').textContent=rotateDir==='cw'?'Rotate: right':'Rotate: left';$('dpLabel').textContent='Connect DotPad';$('introDpLabel').textContent='Connect DotPad & start';$('pinLabel').textContent='Pin preview';$('playHelp').textContent='← → move · ↑ rotate · ↓ down (again on floor = lock) · Space×2 hard drop · C hold';syncSoundBtn();$('pinCap').innerHTML='Portrait 40×60<br>filled=blocks · line=landing · F1+F3=locate';$('introTitleText').textContent='DOT BLOCKS';$('introEyebrow').textContent='Tactile block game';$('introTagline').textContent='Build by touch, navigate by sound.';$('introDesc').textContent='Stand the DotPad upright and play without the screen.';$('diffPracticeName').textContent='Practice';$('diffPracticeDesc').textContent='Nothing falls on its own. Take your time and feel it out.';$('diffBasicName').textContent='Basic';$('diffBasicDesc').textContent='Falls very slowly. Best for playing by touch.';$('diffChallengeName').textContent='Challenge';$('diffChallengeDesc').textContent='Falls at familiar Tetris speed.';$('puzzleModeName').textContent='Bonus mode · Block Puzzle';$('introAccess').textContent='Enter to start without DotPad · 1/2/3 difficulty · P Block Puzzle';$('settingsTitle').textContent='Game Settings';$('pauseTitle').textContent='Paused';$('pauseDesc').textContent='The game and falling piece are paused. The current DotPad pin state is preserved.';$('resumeBtn').textContent='Resume';$('pauseHomeBtn').textContent='Back to Intro';$('resultTitle').textContent='Game Over';$('restartBtn').textContent='Play Again';$('resultHomeBtn').textContent='Choose Another Mode';setToggle(speechToggle,'speechState',settings.speech);setToggle(sfxToggle,'sfxState',settings.sfx);setToggle(musicToggle,'musicState',settings.music);setToggle(assistToggle,'assistState',settings.assist)}
+  function applyLang(){if(LANG!=='en')return;document.documentElement.lang='en';document.title='DOT BLOCKS';$('blindBadge').textContent='BLIND-FIRST';$('scoreTitle').textContent='Game Stats';$('scoreLabel').textContent='Score';$('secondaryLabel').textContent='Lines';$('levelLabel').textContent='Level';$('bestLabel').textContent='Best';$('nextTitle').textContent='Next Piece';$('holdTitle').textContent='Held Piece';$('holdHint').textContent='C / F1+F2';$('verticalTitle').textContent='Portrait DotPad';$('orientationText').innerHTML='<strong>40×60 logical pins</strong> rotate automatically into the physical 60×40 output. Stand the DotPad with controls at the bottom.';$('legend').innerHTML='<span class="legend-sample outline" aria-hidden="true"></span><span>Completely filled surface: settled and moving blocks</span><span class="legend-sample solid" aria-hidden="true"></span><span>F1+F3: highlight just your piece</span><span class="legend-sample ghost" aria-hidden="true"></span><span>Horizontal line: landing preview</span>';$('trayTitle').textContent='Pieces';$('controlsTitle').textContent='Controls';$('padKeysTitle').textContent='DotPad Keys';$('accessTitle').textContent='Audio & Accessibility';$('speechLabel').textContent='Speech guidance';$('speechModeLabel').textContent='Speech source';speechModeSelect.options[0].text='SuperDot TTS';speechModeSelect.options[1].text='Screen reader only';speechModeSelect.options[2].text='Both';$('sfxLabel').textContent='Directional earcons';$('musicLabel').textContent='Procedural music';$('assistLabel').textContent='Tactile-friendly lock delay';$('spawnHoldLabel').textContent='Always pause new piece';$('speedLabel').textContent='Drop speed';speedSelect.options[0].text='Tactile slow';speedSelect.options[1].text='Tactile turn-based';speedSelect.options[2].text='Relaxed';speedSelect.options[3].text='Standard';speedSelect.options[4].text='Challenge';$('musicStyleLabel').textContent='Music style';$('padMapTitle').textContent='DotPad Keys';$('padMapHelp').textContent='Pick a DotPad key for each action. Choosing a key already in use clears it from the other action. F1+F4 is reserved for opening settings.';$('padMapReset').textContent='Reset to defaults';$('padTabDrop').textContent='Drop mode';$('padTabPuzzle').textContent='Block Puzzle';renderPadMap();$('sfxVolumeLabel').textContent='Effects volume';sfxVolumeSelect.options[0].text='Quiet';sfxVolumeSelect.options[1].text='Normal';sfxVolumeSelect.options[2].text='Loud';sfxVolumeSelect.options[3].text='Maximum';$('musicVolumeLabel').textContent='Music volume';$('dockVolLabel').textContent='Music volume';musicStyleSelect.options[0].text='Default (original ambient/chiptune)';musicStyleSelect.options[1].text='Korobeiniki (Russian folk, 1861)';musicStyleSelect.options[2].text='Kalinka (Larionov, 1860)';musicStyleSelect.options[3].text='Dance of the Sugar Plum Fairy (Tchaikovsky, 1892)';$('newLabel').textContent='Start';$('pauseLabel').textContent='Pause';$('statusLabel').textContent='Status';$('scanLabel').textContent='Surface scan';$('helpLabel').textContent='How to play';$('orientationLabel').textContent=rotateDir==='cw'?'Rotate: right':'Rotate: left';$('dpLabel').textContent='Connect DotPad';$('introDpLabel').textContent='Connect DotPad & start';$('pinLabel').textContent='Pin preview';$('playHelp').textContent='← → move · ↑ rotate · ↓ down (again on floor = lock) · Space×2 hard drop · C hold';syncSoundBtn();$('pinCap').innerHTML='Portrait 40×60<br>filled=blocks · line=landing · F1+F3=locate';$('introTitleText').textContent='DOT BLOCKS';$('introEyebrow').textContent='Tactile block game';$('introTagline').textContent='Build by touch, navigate by sound.';$('introDesc').textContent='Stand the DotPad upright and play without the screen.';$('diffPracticeName').textContent='Practice';$('diffPracticeDesc').textContent='Nothing falls on its own. Take your time and feel it out.';$('diffBasicName').textContent='Basic';$('diffBasicDesc').textContent='Falls very slowly. Best for playing by touch.';$('diffChallengeName').textContent='Challenge';$('diffChallengeDesc').textContent='Falls at familiar Tetris speed.';$('puzzleModeName').textContent='Bonus mode · Block Puzzle';$('introAccess').textContent='Enter to start without DotPad · 1/2/3 difficulty · P Block Puzzle';$('settingsTitle').textContent='Game Settings';$('pauseTitle').textContent='Paused';$('pauseDesc').textContent='The game and falling piece are paused. The current DotPad pin state is preserved.';$('resumeBtn').textContent='Resume';$('pauseHomeBtn').textContent='Back to Intro';$('resultTitle').textContent='Game Over';$('restartBtn').textContent='Play Again';$('resultHomeBtn').textContent='Choose Another Mode';setToggle(speechToggle,'speechState',settings.speech);setToggle(sfxToggle,'sfxState',settings.sfx);setToggle(musicToggle,'musicState',settings.music);setToggle(assistToggle,'assistState',settings.assist)}
 
   {const i=DIFFS.findIndex(d=>d.speed===settings.speed);if(i>=0)diffIndex=i}
-  renderPadMap();applyLang();syncSoundBtn();setMode(params.get('mode')==='puzzle'?'puzzle':'drop',false);showIntro();loadSDK();if(params.get('monitor')==='1')dpMonOpen(true);
+  applyMusicVolume(settings.musicVolume,{announce:false});renderPadMap();applyLang();syncSoundBtn();setMode(params.get('mode')==='puzzle'?'puzzle':'drop',false);showIntro();loadSDK();if(params.get('monitor')==='1')dpMonOpen(true);
   if(params.get('preview')==='1'){pinwrap.classList.add('show');pinToggle.setAttribute('aria-pressed','true');drawPin()}
   tw('ready',{modes:['drop','puzzle'],lang:LANG});twSize();
 })();

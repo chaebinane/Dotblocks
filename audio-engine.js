@@ -112,7 +112,7 @@
       this.sfxEnabled = true;
       /* Was 0.16, which combined with per-note gains around 0.06 put the music far
          under the earcons (0.46). Raised, and now user-adjustable. */
-      this.musicVolume = 0.30;
+      this.musicVolume = 0.55;
       this.sfxVolume = 0.46;
       this.mode = 'drop';
       this.level = 1;
@@ -176,7 +176,7 @@
     }
 
     setMusicVolume(value) {
-      this.musicVolume = Math.max(0, Math.min(0.7, Number(value) || 0));
+      this.musicVolume = Math.max(0, Math.min(1, Number(value) || 0));
       this.updateMusicGain();
     }
 
@@ -314,7 +314,7 @@
         this.tone(
           semitone(hit.note), dur, at,
           calm ? 'triangle' : tune.wave,
-          calm ? 0.055 : 0.062,
+          calm ? 0.10 : 0.115,
           this.musicBus,
           step % 32 < 16 ? -0.14 : 0.14
         );
@@ -325,7 +325,7 @@
         const root = tune.bass[bar];
         // Alternate root and fifth for a walking chiptune bass.
         const degree = beat % 2 === 0 ? root : root + 7;
-        this.tone(semitone(-24 + degree), stepSeconds * 3.1, at, 'triangle', calm ? 0.06 : 0.08, this.musicBus, 0);
+        this.tone(semitone(-24 + degree), stepSeconds * 3.1, at, 'triangle', calm ? 0.09 : 0.115, this.musicBus, 0);
       }
       if (!calm && step % 4 === 2) {
         this.noise(0.026, at, 0.014, this.musicBus, 0);
